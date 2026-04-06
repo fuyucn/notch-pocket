@@ -38,8 +38,9 @@ Package.resolved
 
 # Archives & builds
 *.app
-*.ipa                    # iOS-specific
+*.ipa
 *.dSYM.zip
+*.xcarchive
 
 # Signing (iOS-specific)
 *.mobileprovision        # iOS provisioning profiles
@@ -50,13 +51,43 @@ Package.resolved
 *.gcda
 codecov/
 
-# Env
+# Secrets & credentials — NEVER commit these
 .env
+.env.*
 .env.local
+*.secret
+*.secrets
+secrets/
+credentials/
+*_token.json
+.token
+
+# Certificates, keys & signing identities
+*.pem
+*.p12
+*.key
+*.cer
+*.certSigningRequest
+
+# macOS Keychain
+*.keychain
+*.keychain-db
+
+# SSH keys (in case accidentally placed in repo)
+id_rsa
+id_rsa.pub
+id_ed25519
+id_ed25519.pub
 
 # Playground
 *.playground/timeline.xctimeline
 *.playground/playground.xcworkspace
+
+# AI assistant / editor local config
+.claude/
+.cursor/
+.aider*
+.copilot/
 
 # Crash logs
 *.crash
