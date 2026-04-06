@@ -1,18 +1,23 @@
 @preconcurrency import AppKit
 
 /// Detects screen configuration changes and provides NotchGeometry for
-/// the primary screen (preferring the built-in notched display).
+/// all connected screens.
 @MainActor
 public final class ScreenDetector {
-    /// Current geometry for the active screen.
+    /// Current geometry for the primary screen (backward compat).
     public private(set) var currentGeometry: NotchGeometry
-    /// Callback when screen configuration changes and geometry is updated.
+    /// Geometries for all connected screens, keyed by screen's deviceDescription number.
+    public private(set) var allGeometries: [CGDirectDisplayID: NotchGeometry] = [:]
+    /// Callback when screen configuration changes (receives all geometries).
     public var onScreenChange: ((NotchGeometry) -> Void)?
+    /// Callback when the full set of screens changes (added/removed/reconfigured).
+    public var onAllScreensChanged: (([CGDirectDisplayID: NotchGeometry]) -> Void)?
 
     private var observer: NSObjectProtocol?
 
     public init() {
         currentGeometry = Self.detectPrimaryGeometry()
+        allGeometries = Self.detectAllGeometries()
     }
 
     deinit {
@@ -50,7 +55,9 @@ public final class ScreenDetector {
     public func refresh() {
         let newGeometry = Self.detectPrimaryGeometry()
         currentGeometry = newGeometry
+        allGeometries = Self.detectAllGeometries()
         onScreenChange?(newGeometry)
+        onAllScreensChanged?(allGeometries)
     }
 
     // MARK: - Screen selection
@@ -84,23 +91,37 @@ public final class ScreenDetector {
         NSScreen.screens.map { NotchGeometry(screen: $0) }
     }
 
+    /// Build a dictionary of display ID → NotchGeometry for all screens.
+    public static func detectAllGeometries() -> [CGDirectDisplayID: NotchGeometry] {
+        var result: [CGDirectDisplayID: NotchGeometry] = [:]
+        for screen in NSScreen.screens {
+            let displayID = screen.displayID
+            result[displayID] = NotchGeometry(screen: screen)
+        }
+        return result
+    }
+
     // MARK: - Private
 
     private func handleScreenChange() {
         let newGeometry = Self.detectPrimaryGeometry()
         currentGeometry = newGeometry
+        allGeometries = Self.detectAllGeometries()
         onScreenChange?(newGeometry)
+        onAllScreensChanged?(allGeometries)
     }
 }
 
 // MARK: - NSScreen helpers
 
 extension NSScreen {
+    /// The CGDirectDisplayID for this screen.
+    var displayID: CGDirectDisplayID {
+        deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? CGDirectDisplayID ?? 0
+    }
+
     /// Whether this is the built-in display (MacBook screen).
     var isBuiltIn: Bool {
-        // The built-in display has a stable display ID.
-        // CGDisplayIsBuiltin checks the hardware display ID.
-        let screenNumber = deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? CGDirectDisplayID ?? 0
-        return CGDisplayIsBuiltin(screenNumber) != 0
+        CGDisplayIsBuiltin(displayID) != 0
     }
 }

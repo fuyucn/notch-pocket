@@ -38,6 +38,8 @@ Package.resolved
 
 # Archives & builds
 *.app
+releases/*
+!releases/README.md
 *.ipa
 *.dSYM.zip
 *.xcarchive

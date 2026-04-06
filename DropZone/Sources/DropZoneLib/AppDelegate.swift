@@ -3,15 +3,18 @@ import AppKit
 public final class AppDelegate: NSObject, NSApplicationDelegate {
     private(set) public var statusBarController: StatusBarController?
     private(set) public var screenDetector: ScreenDetector?
-    private(set) public var dropZonePanel: DropZonePanel?
+    /// All panels keyed by display ID.
+    private(set) public var panels: [CGDirectDisplayID: DropZonePanel] = [:]
+    /// Backward compat: the primary panel (built-in notch screen preferred).
+    public var dropZonePanel: DropZonePanel? { panels.values.first }
     private(set) public var fileShelfManager: FileShelfManager?
     private(set) public var dragMonitor: GlobalDragMonitor?
     private(set) public var settingsManager: SettingsManager?
     private(set) public var settingsWindowController: SettingsWindowController?
     private(set) public var keyboardShortcutManager: KeyboardShortcutManager?
 
-    /// Timer to auto-hide the shelf after mouse leaves.
-    private var hideShelfTimer: Timer?
+    /// Timers to auto-hide the shelf per panel.
+    private var hideShelfTimers: [CGDirectDisplayID: Timer] = [:]
 
     /// Delay before auto-hiding the shelf when mouse leaves (seconds).
     private static let hideShelfDelay: TimeInterval = 1.5
@@ -36,77 +39,49 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
         shelfManager.startExpiryTimer()
         fileShelfManager = shelfManager
 
-        // Set up screen detection and panel
+        // Set up screen detection
         let detector = ScreenDetector()
-        let panel = DropZonePanel(geometry: detector.currentGeometry)
 
-        // Set up global drag monitor
+        // Create one panel per screen
+        for (displayID, geo) in detector.allGeometries {
+            let panel = createPanel(displayID: displayID, geometry: geo, shelfManager: shelfManager)
+            panels[displayID] = panel
+        }
+
+        // Set up global drag monitor with all geometries
         let monitor = GlobalDragMonitor(geometry: detector.currentGeometry)
-        wireGlobalDragMonitor(monitor, panel: panel, shelfManager: shelfManager)
+        monitor.allGeometries = detector.allGeometries
+        wireGlobalDragMonitor(monitor, shelfManager: shelfManager)
         monitor.startMonitoring()
         dragMonitor = monitor
 
-        // Wire drag destination to shelf manager
-        panel.dragDestinationView.fileShelfManager = shelfManager
-        panel.dragDestinationView.onFilesDropped = { [weak panel, weak shelfManager] count in
-            panel?.playDropConfirmation {
-                guard let panel, let manager = shelfManager else { return }
-                panel.fileShelfView.animateAddItems(Array(manager.items.suffix(count)))
-                panel.expandShelf()
-            }
-        }
-
-        // Wire shelf view
-        panel.fileShelfView.fileShelfManager = shelfManager
-        panel.fileShelfView.onShelfEmpty = { [weak panel] in
-            panel?.collapse()
-        }
-        panel.fileShelfView.onItemCountChanged = { [weak panel] count in
-            if panel?.panelState == .hidden || panel?.panelState == .listening {
-                panel?.updateBadge(count: count)
-            }
-        }
-
-        // Wire panel hover for shelf reveal
-        panel.onMouseEntered = { [weak self, weak panel, weak shelfManager] in
-            guard let panel, let manager = shelfManager else { return }
-            self?.cancelHideShelfTimer()
-            if !manager.items.isEmpty && panel.panelState != .shelfExpanded {
-                panel.fileShelfView.reload()
-                panel.expandShelf()
-            }
-        }
-        panel.onMouseExited = { [weak self, weak panel] in
-            guard let panel else { return }
-            // Only auto-hide if we're in shelf-expanded state from hover (not from a drop)
-            if panel.panelState == .shelfExpanded {
-                self?.scheduleHideShelf(panel: panel)
-            }
-        }
-        panel.setupHoverTracking()
-
         // Update shelf view when items change externally (e.g. expiry)
-        shelfManager.onItemsChanged = { [weak panel, weak shelfManager] in
-            guard let panel, let manager = shelfManager else { return }
-            panel.fileShelfView.reload()
-            panel.updateBadge(count: manager.items.count)
+        shelfManager.onItemsChanged = { [weak self, weak shelfManager] in
+            guard let self, let manager = shelfManager else { return }
+            for panel in self.panels.values {
+                panel.fileShelfView.reload()
+                panel.updateBadge(count: manager.items.count)
+            }
         }
 
-        // Screen changes → update geometry for panel and drag monitor
-        detector.onScreenChange = { [weak panel, weak monitor] newGeometry in
-            panel?.geometry = newGeometry
+        // Screen changes → rebuild panels for new screen set
+        detector.onAllScreensChanged = { [weak self, weak monitor, weak shelfManager] newGeometries in
+            guard let self, let shelfManager else { return }
+            self.reconcilePanels(newGeometries: newGeometries, shelfManager: shelfManager)
+            monitor?.allGeometries = newGeometries
+        }
+        detector.onScreenChange = { [weak monitor] newGeometry in
             monitor?.geometry = newGeometry
         }
         detector.startObserving()
 
-        // Set up status bar controller
+        // Set up status bar controller — wire to primary panel
         let controller = StatusBarController()
         controller.setup()
-        wireStatusBarController(controller, panel: panel, shelfManager: shelfManager)
+        wireStatusBarController(controller, shelfManager: shelfManager)
         statusBarController = controller
 
         screenDetector = detector
-        dropZonePanel = panel
 
         // Set up settings window controller
         let settingsWindow = SettingsWindowController(settingsManager: settings)
@@ -125,15 +100,18 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
             manager.expiryInterval = s.expiryInterval
         }
 
-        // Set up global keyboard shortcut (Cmd+Shift+D to toggle shelf)
+        // Set up global keyboard shortcut (Cmd+Shift+D to toggle shelf on primary panel)
         let shortcuts = KeyboardShortcutManager()
-        shortcuts.onToggleShelf = { [weak panel, weak shelfManager] in
-            guard let panel, let manager = shelfManager else { return }
-            if panel.panelState == .shelfExpanded {
-                panel.collapse()
-            } else if !manager.items.isEmpty {
-                panel.fileShelfView.reload()
-                panel.expandShelf()
+        shortcuts.onToggleShelf = { [weak self, weak shelfManager] in
+            guard let self, let manager = shelfManager else { return }
+            // Toggle shelf on the primary (notch) panel
+            if let primaryPanel = self.panels.values.first(where: { $0.geometry.hasNotch }) ?? self.panels.values.first {
+                if primaryPanel.panelState == .shelfExpanded {
+                    primaryPanel.collapse()
+                } else if !manager.items.isEmpty {
+                    primaryPanel.fileShelfView.reload()
+                    primaryPanel.expandShelf()
+                }
             }
         }
         shortcuts.register()
@@ -150,8 +128,10 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
         dragMonitor?.stopMonitoring()
         dragMonitor = nil
 
-        hideShelfTimer?.invalidate()
-        hideShelfTimer = nil
+        for timer in hideShelfTimers.values {
+            timer.invalidate()
+        }
+        hideShelfTimers.removeAll()
 
         fileShelfManager?.cleanupAll()
         fileShelfManager = nil
@@ -159,8 +139,10 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
         screenDetector?.stopObserving()
         screenDetector = nil
 
-        dropZonePanel?.hide()
-        dropZonePanel = nil
+        for panel in panels.values {
+            panel.hide()
+        }
+        panels.removeAll()
 
         statusBarController?.teardown()
         statusBarController = nil
@@ -177,35 +159,44 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
     @MainActor
     private func wireGlobalDragMonitor(
         _ monitor: GlobalDragMonitor,
-        panel: DropZonePanel,
         shelfManager: FileShelfManager
     ) {
-        // When a system-wide file drag begins, enter listening state
-        monitor.onDragBegan = { [weak panel] in
-            if panel?.panelState == .hidden {
-                panel?.enterListening()
+        // When a system-wide file drag begins, enter listening state on ALL panels
+        monitor.onDragBegan = { [weak self] in
+            guard let self else { return }
+            for panel in self.panels.values {
+                if panel.panelState == .hidden {
+                    panel.enterListening()
+                }
             }
         }
 
-        // When the drag cursor enters the activation zone, expand the panel
-        monitor.onDragEnteredZone = { [weak panel] in
-            if panel?.panelState == .listening {
-                panel?.expand()
+        // When the drag cursor enters a screen's activation zone, expand that panel
+        monitor.onDragEnteredZone = { [weak self] displayID in
+            guard let self, let panel = self.panels[displayID] else { return }
+            if panel.panelState == .listening {
+                panel.expand()
             }
         }
 
-        // When the drag cursor leaves the activation zone, collapse if not dropped
-        monitor.onDragExitedZone = { [weak panel] in
-            if panel?.panelState == .expanded {
-                panel?.collapse()
+        // When the drag cursor leaves a screen's activation zone, collapse that panel
+        monitor.onDragExitedZone = { [weak self] displayID in
+            guard let self, let panel = self.panels[displayID] else { return }
+            if panel.panelState == .expanded {
+                panel.collapse()
             }
         }
 
-        // When the drag session ends, return to hidden if still just listening
-        monitor.onDragEnded = { [weak panel, weak self] in
-            self?.cancelHideShelfTimer()
-            if panel?.panelState == .listening {
-                panel?.hide()
+        // When the drag session ends, return all panels to hidden if still listening
+        monitor.onDragEnded = { [weak self] in
+            guard let self else { return }
+            for (displayID, _) in self.hideShelfTimers {
+                self.cancelHideShelfTimer(for: displayID)
+            }
+            for panel in self.panels.values {
+                if panel.panelState == .listening {
+                    panel.hide()
+                }
             }
         }
     }

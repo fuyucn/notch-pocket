@@ -85,6 +85,12 @@ public final class FileShelfManager {
         var added: [ShelfItem] = []
 
         for url in urls {
+            // Skip duplicates — don't add a file that's already on the shelf
+            let standardized = url.standardizedFileURL
+            if items.contains(where: { $0.originalURL.standardizedFileURL == standardized }) {
+                continue
+            }
+
             // Enforce max items — remove oldest if needed
             if items.count >= maxItems, let oldest = items.first {
                 removeItem(oldest.id)
