@@ -43,6 +43,12 @@ Before merging any branch into `main`, confirm:
 - [ ] Commit messages are clear and descriptive
 - [ ] Branch is up to date with `main` (rebase or merge main into branch first)
 
+**After merging to `main`** (mandatory — see [Post-Merge Release Checklist](#post-merge-release-checklist-mandatory)):
+
+- [ ] `CHANGELOG.md` updated with new version entry
+- [ ] Annotated git tag created (`git tag -a vX.X.X -m "..."`)
+- [ ] README version badge updated to reflect new version
+
 ### Commit Message Convention
 
 ```
@@ -64,6 +70,22 @@ Follow **Semantic Versioning** (`major.minor.patch`):
 Tag format: `v0.1.0`, `v0.2.0`, `v1.0.0`
 
 Tags are only applied on the `main` branch after a successful merge.
+
+#### Post-Merge Release Checklist (mandatory)
+
+After every merge to `main`, complete the following steps before moving on:
+
+1. **Update `CHANGELOG.md`** — Add a new version entry at the top with:
+   - Version number and date (`## [v0.X.0] — YYYY-MM-DD`)
+   - Summary of changes grouped by type (Added, Changed, Fixed)
+   - Reference to the plan/branch that was merged
+2. **Create annotated git tag** — Tag the merge commit on `main`:
+   ```bash
+   git tag -a v0.X.0 -m "vX.X.X: short description of release"
+   ```
+3. **Update README version badge** — Ensure the version badge in `README.md` reflects the new version.
+
+All three steps are required. A merge is not considered complete until the tag is created and both files are updated.
 
 ---
 

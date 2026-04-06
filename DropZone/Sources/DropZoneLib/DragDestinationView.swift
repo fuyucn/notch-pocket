@@ -184,6 +184,14 @@ public final class DragDestinationView: NSView {
         return []
     }
 
+    // MARK: - Hit testing
+
+    /// Allow non-drag mouse events (clicks) to pass through to views below.
+    /// This view only needs to intercept drag-and-drop operations.
+    public override func hitTest(_ point: NSPoint) -> NSView? {
+        return nil
+    }
+
     // MARK: - Layout
 
     public override func layout() {

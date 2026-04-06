@@ -23,23 +23,22 @@ public final class DropZonePanel: NSPanel {
 
     // MARK: - Animation constants (from DESIGN.md)
 
-    private static let expandDuration: TimeInterval = 0.3
+    private static let expandDuration: TimeInterval = 0.35
     private static let collapseDuration: TimeInterval = 0.25
     private static let springDamping: CGFloat = 0.75
-    // Spring response mapped to CA timing: use damped spring or ease-out approximation
 
     // MARK: - Visual effect
 
     private let blurView: NSVisualEffectView = {
         let view = NSVisualEffectView()
-        view.material = .hudWindow
+        view.material = .popover
         view.blendingMode = .behindWindow
         view.state = .active
         view.wantsLayer = true
         view.layer?.cornerRadius = NotchGeometry.cornerRadius
         view.layer?.cornerCurve = .continuous
-        view.layer?.borderWidth = 1
-        view.layer?.borderColor = NSColor.white.withAlphaComponent(0.15).cgColor
+        view.layer?.borderWidth = 0.5
+        view.layer?.borderColor = NSColor.white.withAlphaComponent(0.2).cgColor
         view.layer?.masksToBounds = true
         return view
     }()
@@ -86,13 +85,16 @@ public final class DropZonePanel: NSPanel {
 
     private func configurePanelBehavior() {
         isFloatingPanel = true
-        // Use screenSaver level to stay above all other windows including fullscreen apps
-        level = .init(rawValue: Int(CGShieldingWindowLevel()) + 1)
+        // Use popUpMenu level — high enough to float above most windows,
+        // but low enough that system drag sessions can still target us.
+        // CGShieldingWindowLevel is too high and blocks drag-and-drop.
+        level = .popUpMenu
         collectionBehavior = [.fullScreenAuxiliary, .stationary, .canJoinAllSpaces]
 
         isOpaque = false
         backgroundColor = .clear
-        hasShadow = true
+        hasShadow = false  // We use a custom shadow layer instead
+        ignoresMouseEvents = false
 
         titleVisibility = .hidden
         titlebarAppearsTransparent = true
@@ -104,19 +106,31 @@ public final class DropZonePanel: NSPanel {
 
     private func configureVisualContent() {
         guard let contentView else { return }
+        contentView.wantsLayer = true
+
+        // Custom shadow on content view layer for soft, notch-like glow
+        if let layer = contentView.layer {
+            layer.shadowColor = NSColor.black.cgColor
+            layer.shadowOpacity = 0.4
+            layer.shadowRadius = 12
+            layer.shadowOffset = CGSize(width: 0, height: -4)
+            layer.masksToBounds = false
+        }
+
         blurView.frame = contentView.bounds
         blurView.autoresizingMask = [.width, .height]
         contentView.addSubview(blurView)
 
-        // Add drag destination view on top of blur
+        // Add file shelf view (hidden by default, shown only in shelfExpanded state)
+        fileShelfView.frame = contentView.bounds
+        fileShelfView.autoresizingMask = [.width, .height]
+        fileShelfView.isHidden = true
+        contentView.addSubview(fileShelfView)
+
+        // Add drag destination view on top — must be topmost to receive drag events
         dragDestinationView.frame = contentView.bounds
         dragDestinationView.autoresizingMask = [.width, .height]
         contentView.addSubview(dragDestinationView)
-
-        // Add file shelf view on top of drag destination
-        fileShelfView.frame = contentView.bounds
-        fileShelfView.autoresizingMask = [.width, .height]
-        contentView.addSubview(fileShelfView)
     }
 
     // MARK: - NSPanel overrides
@@ -136,19 +150,21 @@ public final class DropZonePanel: NSPanel {
         guard panelState != .expanded else { return }
         panelState = .expanded
 
-        fileShelfView.isHidden = false
+        // Keep shelf hidden during drop-zone mode — only dragDestinationView should be active
+        fileShelfView.isHidden = true
 
         let targetSize = NotchGeometry.expandedSize
         let targetOrigin = geometry.panelOrigin(for: targetSize)
         let targetFrame = NSRect(origin: targetOrigin, size: targetSize)
 
-        // Make visible before animating
+        // Start small and transparent for a Dynamic Island-like pop
         alphaValue = 0
+        setFrame(targetFrame.insetBy(dx: 20, dy: 8), display: false)
         orderFrontRegardless()
 
         NSAnimationContext.runAnimationGroup { context in
             context.duration = Self.expandDuration
-            context.timingFunction = CAMediaTimingFunction(controlPoints: 0.2, 0.9, 0.3, 1.0) // spring-like ease-out
+            context.timingFunction = CAMediaTimingFunction(controlPoints: 0.22, 1.0, 0.36, 1.0)
             context.allowsImplicitAnimation = true
 
             self.animator().setFrame(targetFrame, display: true)
@@ -170,12 +186,14 @@ public final class DropZonePanel: NSPanel {
 
         if !isVisible {
             alphaValue = 0
+            // Start slightly smaller for a smooth pop-in
+            setFrame(targetFrame.insetBy(dx: 15, dy: 6), display: false)
             orderFrontRegardless()
         }
 
         NSAnimationContext.runAnimationGroup { context in
             context.duration = Self.expandDuration
-            context.timingFunction = CAMediaTimingFunction(controlPoints: 0.2, 0.9, 0.3, 1.0)
+            context.timingFunction = CAMediaTimingFunction(controlPoints: 0.22, 1.0, 0.36, 1.0)
             context.allowsImplicitAnimation = true
 
             self.animator().setFrame(targetFrame, display: true)
@@ -191,15 +209,13 @@ public final class DropZonePanel: NSPanel {
         }
         panelState = .collapsed
 
-        let collapsedSize = geometry.hasNotch
-            ? (geometry.notchRect?.size ?? NotchGeometry.fallbackPillSize)
-            : NotchGeometry.fallbackPillSize
-        let collapsedOrigin = geometry.panelOrigin(for: collapsedSize)
-        let collapsedFrame = NSRect(origin: collapsedOrigin, size: collapsedSize)
+        // Shrink toward the notch center for a natural collapse effect
+        let currentFrame = frame
+        let collapsedFrame = currentFrame.insetBy(dx: 20, dy: 8)
 
         NSAnimationContext.runAnimationGroup({ context in
             context.duration = Self.collapseDuration
-            context.timingFunction = CAMediaTimingFunction(name: .easeIn)
+            context.timingFunction = CAMediaTimingFunction(controlPoints: 0.55, 0.0, 0.68, 0.3)
             context.allowsImplicitAnimation = true
 
             self.animator().setFrame(collapsedFrame, display: true)
@@ -208,6 +224,7 @@ public final class DropZonePanel: NSPanel {
             MainActor.assumeIsolated {
                 self?.orderOut(nil)
                 self?.panelState = .hidden
+                self?.fileShelfView.isHidden = true
                 completion?()
             }
         })

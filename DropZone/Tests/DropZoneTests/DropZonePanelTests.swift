@@ -55,8 +55,9 @@ struct DropZonePanelTests {
     func panelIsFloating() {
         let panel = DropZonePanel(geometry: makeTestGeometry(hasNotch: true))
         #expect(panel.isFloatingPanel)
-        // Panel should be above the shielding window level
-        #expect(panel.level.rawValue > Int(CGShieldingWindowLevel()))
+        // Panel should be at popUpMenu level — high enough to float above most windows
+        // but low enough for drag-and-drop to work
+        #expect(panel.level == .popUpMenu)
     }
 
     @Test("Panel is transparent with clear background")
