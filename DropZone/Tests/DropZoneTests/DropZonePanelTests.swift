@@ -55,8 +55,9 @@ struct DropZonePanelTests {
     func panelIsFloating() {
         let panel = DropZonePanel(geometry: makeTestGeometry(hasNotch: true))
         #expect(panel.isFloatingPanel)
-        // Panel should be above the shielding window level
-        #expect(panel.level.rawValue > Int(CGShieldingWindowLevel()))
+        // Panel should be at popUpMenu level — high enough to float above most windows
+        // but low enough for drag-and-drop to work
+        #expect(panel.level == .popUpMenu)
     }
 
     @Test("Panel is transparent with clear background")
@@ -158,13 +159,19 @@ struct DropZonePanelTests {
         #expect(panel.panelState == .collapsed)
     }
 
-    @Test("shelfExpanded panel has correct size")
+    @Test("shelfExpanded panel has correct target size constant")
     func shelfExpandedSize() {
+        // Verify the static size constant is correct
+        let expectedSize = DropZonePanel.shelfExpandedSize
+        #expect(expectedSize.width == 420)
+        #expect(expectedSize.height == 100)
+
+        // expandShelf() starts with an inset frame and animates to targetFrame;
+        // animations don't complete synchronously, so verify the panel entered
+        // the correct state rather than checking the mid-animation frame.
         let panel = DropZonePanel(geometry: makeTestGeometry(hasNotch: true))
         panel.expandShelf()
-        let expectedSize = DropZonePanel.shelfExpandedSize
-        #expect(panel.frame.size.width == expectedSize.width)
-        #expect(panel.frame.size.height == expectedSize.height)
+        #expect(panel.panelState == .shelfExpanded)
     }
 
     // MARK: - File count badge

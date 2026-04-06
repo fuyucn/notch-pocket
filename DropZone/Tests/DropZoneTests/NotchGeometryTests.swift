@@ -40,7 +40,7 @@ struct NotchGeometryTests {
 
     // MARK: - Panel origin
 
-    @Test("Panel origin centers on notch midX, grows downward from notch bottom")
+    @Test("Panel origin centers on notch midX, top aligns with notch top edge")
     func panelOriginWithNotch() {
         let notchRect = NSRect(x: 700, y: 1390, width: 200, height: 32)
         let geometry = NotchGeometry(
@@ -53,9 +53,9 @@ struct NotchGeometryTests {
         let size = NSSize(width: 320, height: 80)
         let origin = geometry.panelOrigin(for: size)
 
-        // Centered on notch midX (800), growing downward from notch bottom (1390)
+        // Centered on notch midX (800), top aligns with notch top (1422 = 1390 + 32)
         #expect(abs(origin.x - 640) < 0.01)  // 800 - 160
-        #expect(abs(origin.y - 1310) < 0.01) // 1390 - 80
+        #expect(abs(origin.y - 1342) < 0.01) // 1422 - 80
     }
 
     @Test("Panel origin centers on screen without notch")
@@ -114,8 +114,9 @@ struct NotchGeometryTests {
 
     @Test("Design constants match expected values")
     func designConstants() {
-        #expect(NotchGeometry.activationPaddingBottom == 40)
-        #expect(NotchGeometry.activationPaddingSide == 20)
+        #expect(NotchGeometry.activationPaddingBottom == 60)
+        #expect(NotchGeometry.activationPaddingTop == 10)
+        #expect(NotchGeometry.activationPaddingSide == 30)
         #expect(NotchGeometry.expandedSize.width == 320)
         #expect(NotchGeometry.expandedSize.height == 80)
         #expect(NotchGeometry.cornerRadius == 18)
@@ -161,9 +162,9 @@ struct NotchGeometryTests {
             hasNotch: true
         )
         let origin = geometry.panelOrigin(for: NSSize(width: 0, height: 0))
-        // Should be at notch midX (800) and notch minY (1390)
+        // Should be at notch midX (800) and notch maxY (1422)
         #expect(abs(origin.x - 800) < 0.01)
-        #expect(abs(origin.y - 1390) < 0.01)
+        #expect(abs(origin.y - 1422) < 0.01)
     }
 
     @Test("Panel origin with very large size clamps to negative coordinates")
@@ -175,7 +176,7 @@ struct NotchGeometryTests {
             hasNotch: true
         )
         let origin = geometry.panelOrigin(for: NSSize(width: 5000, height: 5000))
-        // x = 800 - 2500 = -1700, y = 1390 - 5000 = -3610
+        // x = 800 - 2500 = -1700, y = 1422 - 5000 = -3578
         #expect(origin.x < 0)
         #expect(origin.y < 0)
     }
@@ -192,8 +193,9 @@ struct NotchGeometryTests {
         )
 
         let origin = geometry.panelOrigin(for: NSSize(width: 320, height: 80))
-        // Centered on notch midX = 2720
+        // Centered on notch midX = 2720, top at notch maxY = 1422
         #expect(abs(origin.x - 2560) < 0.01) // 2720 - 160
+        #expect(abs(origin.y - 1342) < 0.01) // 1422 - 80
         #expect(origin.x > 1920) // Must be on the secondary screen
     }
 
@@ -206,7 +208,7 @@ struct NotchGeometryTests {
                 x: screenFrame.midX - NotchGeometry.fallbackPillSize.width / 2 - NotchGeometry.activationPaddingSide,
                 y: screenFrame.maxY - NotchGeometry.fallbackPillSize.height - NotchGeometry.activationPaddingBottom,
                 width: NotchGeometry.fallbackPillSize.width + NotchGeometry.activationPaddingSide * 2,
-                height: NotchGeometry.fallbackPillSize.height + NotchGeometry.activationPaddingBottom
+                height: NotchGeometry.fallbackPillSize.height + NotchGeometry.activationPaddingBottom + NotchGeometry.activationPaddingTop
             ),
             screenFrame: screenFrame,
             hasNotch: false

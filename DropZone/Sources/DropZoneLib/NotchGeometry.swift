@@ -14,9 +14,11 @@ public struct NotchGeometry: Sendable {
     // MARK: - Design constants
 
     /// Vertical padding below the notch for the activation zone.
-    public static let activationPaddingBottom: CGFloat = 40
+    public static let activationPaddingBottom: CGFloat = 60
+    /// Vertical padding above the notch to extend activation zone to screen edge.
+    public static let activationPaddingTop: CGFloat = 10
     /// Horizontal padding on each side of the notch for the activation zone.
-    public static let activationPaddingSide: CGFloat = 20
+    public static let activationPaddingSide: CGFloat = 30
 
     /// Default panel size for the collapsed notch indicator (no-notch fallback).
     public static let fallbackPillSize = NSSize(width: 200, height: 32)
@@ -67,15 +69,18 @@ public struct NotchGeometry: Sendable {
 
     // MARK: - Panel positioning
 
-    /// The origin point for the DropZonePanel in its collapsed state.
-    /// Centered horizontally on the notch (or screen top), flush with top.
+    /// The origin point for the DropZonePanel.
+    /// Centered horizontally on the notch (or screen top).
+    /// The panel's top edge aligns with the top of the screen (notch top),
+    /// expanding downward like a Dynamic Island.
     public func panelOrigin(for size: NSSize) -> NSPoint {
         let centerX: CGFloat
         let topY: CGFloat
 
         if let notch = notchRect {
             centerX = notch.midX
-            topY = notch.minY // Panel grows downward from notch bottom
+            // Panel top aligns with screen top (notch top edge) and grows downward
+            topY = notch.maxY
         } else {
             centerX = screenFrame.midX
             topY = screenFrame.maxY
@@ -99,7 +104,7 @@ public struct NotchGeometry: Sendable {
             x: rect.origin.x - activationPaddingSide,
             y: rect.origin.y - activationPaddingBottom,
             width: rect.width + activationPaddingSide * 2,
-            height: rect.height + activationPaddingBottom
+            height: rect.height + activationPaddingBottom + activationPaddingTop
         )
     }
 }
