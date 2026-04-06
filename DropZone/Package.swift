@@ -1,4 +1,4 @@
-// swift-tools-version: 5.10
+// swift-tools-version: 6.0
 
 import PackageDescription
 
@@ -21,7 +21,19 @@ let package = Package(
         .testTarget(
             name: "DropZoneTests",
             dependencies: ["DropZoneLib"],
-            path: "Tests/DropZoneTests"
+            path: "Tests/DropZoneTests",
+            swiftSettings: [
+                .unsafeFlags([
+                    "-F", "/Library/Developer/CommandLineTools/Library/Developer/Frameworks",
+                ]),
+            ],
+            linkerSettings: [
+                .unsafeFlags([
+                    "-Xlinker", "-rpath", "-Xlinker", "/Library/Developer/CommandLineTools/Library/Developer/Frameworks",
+                    "-Xlinker", "-F", "-Xlinker", "/Library/Developer/CommandLineTools/Library/Developer/Frameworks",
+                    "-Xlinker", "-L", "-Xlinker", "/Library/Developer/CommandLineTools/Library/Developer/usr/lib",
+                ]),
+            ]
         ),
     ]
 )

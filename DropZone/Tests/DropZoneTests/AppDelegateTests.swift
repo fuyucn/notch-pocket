@@ -59,3 +59,30 @@ struct StatusBarControllerTests {
         #expect(controller.isVisible == false)
     }
 }
+
+@Suite("Sanity Tests")
+struct SanityTests {
+    @Test("DropZoneLib module loads")
+    func moduleLoads() {
+        // If this test compiles and runs, the DropZoneLib module is loadable
+        #expect(true)
+    }
+
+    @MainActor
+    @Test("AppDelegate conforms to NSApplicationDelegate")
+    func appDelegateConformance() {
+        let delegate = AppDelegate()
+        #expect(delegate is NSApplicationDelegate)
+    }
+
+    @MainActor
+    @Test("StatusBarController full lifecycle")
+    func fullLifecycle() {
+        let controller = StatusBarController()
+        #expect(controller.isVisible == false, "Should start invisible")
+        controller.setup()
+        #expect(controller.isVisible == true, "Should be visible after setup")
+        controller.teardown()
+        #expect(controller.isVisible == false, "Should be invisible after teardown")
+    }
+}
