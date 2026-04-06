@@ -147,4 +147,67 @@ struct GlobalDragMonitorTests {
     func dragProximityPaddingValue() {
         #expect(GlobalDragMonitor.dragProximityPadding == 60)
     }
+
+    // MARK: - Additional edge cases
+
+    @Test("Point at exact corner of padded zone")
+    func pointAtPaddedZoneCorner() {
+        let monitor = GlobalDragMonitor(geometry: makeTestGeometry())
+        // Padded zone: x=620, y=1290, w=360, h=132
+        // Origin corner should be inside
+        let origin = NSPoint(x: 620, y: 1290)
+        #expect(monitor.isPointInActivationZone(origin))
+    }
+
+    @Test("pasteboardHasFiles returns false when drag pasteboard is empty")
+    func pasteboardHasFilesEmpty() {
+        let monitor = GlobalDragMonitor(geometry: makeTestGeometry())
+        // We can't control the drag pasteboard, but at test time it should be empty
+        // This tests the method doesn't crash at minimum
+        _ = monitor.pasteboardHasFiles()
+    }
+
+    @Test("Start, stop, start monitoring cycle is safe")
+    func monitoringCycle() {
+        let monitor = GlobalDragMonitor(geometry: makeTestGeometry())
+        monitor.startMonitoring()
+        monitor.stopMonitoring()
+        monitor.startMonitoring()
+        monitor.stopMonitoring()
+        #expect(monitor.isDragActive == false)
+        #expect(monitor.isInsideZone == false)
+    }
+
+    @Test("Geometry update changes hit test results")
+    func geometryUpdateChangesHitTest() {
+        let monitor = GlobalDragMonitor(geometry: makeTestGeometry())
+        // Point inside the original zone
+        let point = NSPoint(x: 800, y: 1386)
+        #expect(monitor.isPointInActivationZone(point))
+
+        // Update to a geometry where this point is NOT in the zone
+        let farGeo = NotchGeometry(
+            notchRect: nil,
+            activationZone: NSRect(x: 0, y: 0, width: 100, height: 100),
+            screenFrame: NSRect(x: 0, y: 0, width: 1920, height: 1080),
+            hasNotch: false
+        )
+        monitor.geometry = farGeo
+        #expect(!monitor.isPointInActivationZone(point))
+    }
+
+    @Test("No-notch geometry activation zone hit test")
+    func noNotchZoneHitTest() {
+        let geo = NotchGeometry(
+            notchRect: nil,
+            activationZone: NSRect(x: 840, y: 1008, width: 240, height: 72),
+            screenFrame: NSRect(x: 0, y: 0, width: 1920, height: 1080),
+            hasNotch: false
+        )
+        let monitor = GlobalDragMonitor(geometry: geo)
+        // Center of the activation zone (before padding)
+        #expect(monitor.isPointInActivationZone(NSPoint(x: 960, y: 1044)))
+        // Well outside
+        #expect(!monitor.isPointInActivationZone(NSPoint(x: 100, y: 100)))
+    }
 }

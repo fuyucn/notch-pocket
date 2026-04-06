@@ -82,6 +82,44 @@ struct DragDestinationViewTests {
         let types = view.registeredDraggedTypes
         #expect(types.contains(.fileURL))
     }
+
+    @Test("View registers for file promise type")
+    func registeredForFilePromiseType() {
+        let view = DragDestinationView(frame: .zero)
+        let types = view.registeredDraggedTypes
+        #expect(types.contains(NSPasteboard.PasteboardType("com.apple.NSFilePromiseItemMetaData")))
+    }
+
+    @Test("View with zero-size frame does not crash")
+    func zeroSizeFrame() {
+        let view = DragDestinationView(frame: .zero)
+        view.layout()
+        #expect(!view.isHighlighted)
+    }
+
+    @Test("Multiple views can coexist with different managers")
+    func multipleViewsDifferentManagers() throws {
+        let view1 = DragDestinationView(frame: .zero)
+        let view2 = DragDestinationView(frame: .zero)
+
+        let dir1 = FileManager.default.temporaryDirectory
+            .appendingPathComponent("DragView1-\(UUID().uuidString)", isDirectory: true)
+        let dir2 = FileManager.default.temporaryDirectory
+            .appendingPathComponent("DragView2-\(UUID().uuidString)", isDirectory: true)
+
+        view1.fileShelfManager = FileShelfManager(directory: dir1)
+        view2.fileShelfManager = FileShelfManager(directory: dir2)
+
+        #expect(view1.fileShelfManager !== view2.fileShelfManager)
+    }
+
+    @Test("concludeDragOperation resets state")
+    func concludeResetsState() {
+        let view = DragDestinationView(frame: .zero)
+        view.concludeDragOperation(nil)
+        #expect(!view.isHighlighted)
+        #expect(view.dragItemCount == 0)
+    }
 }
 
 @Suite("ShelfItem Tests")

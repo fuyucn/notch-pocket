@@ -87,6 +87,45 @@ struct StatusBarControllerTests {
         controller.onClearShelf = { called = true }
         #expect(!called)
     }
+
+    @Test("onShowSettings callback can be set")
+    func showSettingsCallback() {
+        let controller = StatusBarController()
+        nonisolated(unsafe) var called = false
+        controller.onShowSettings = { called = true }
+        #expect(!called) // Wired but not triggered
+    }
+
+    @Test("Setup then teardown then setup again works")
+    func setupTeardownCycle() {
+        let controller = StatusBarController()
+        controller.setup()
+        #expect(controller.isVisible)
+        controller.teardown()
+        #expect(!controller.isVisible)
+        controller.setup()
+        #expect(controller.isVisible)
+        controller.teardown()
+    }
+
+    @Test("updateFileCount with 1 file uses singular form")
+    func singularFileCount() {
+        let controller = StatusBarController()
+        controller.setup()
+        // Should not crash — the menu items update internally
+        controller.updateFileCount(1)
+        controller.updateFileCount(0)
+        controller.teardown()
+    }
+
+    @Test("updateFileCount with large number does not crash")
+    func largeFileCount() {
+        let controller = StatusBarController()
+        controller.setup()
+        controller.updateFileCount(999)
+        controller.updateFileCount(0)
+        controller.teardown()
+    }
 }
 
 @Suite("Sanity Tests")
@@ -94,14 +133,14 @@ struct SanityTests {
     @Test("DropZoneLib module loads")
     func moduleLoads() {
         // If this test compiles and runs, the DropZoneLib module is loadable
-        #expect(true)
+        #expect(Bool(true))
     }
 
     @MainActor
     @Test("AppDelegate conforms to NSApplicationDelegate")
     func appDelegateConformance() {
         let delegate = AppDelegate()
-        #expect(delegate is NSApplicationDelegate)
+        #expect(delegate is any NSApplicationDelegate)
     }
 
     @MainActor

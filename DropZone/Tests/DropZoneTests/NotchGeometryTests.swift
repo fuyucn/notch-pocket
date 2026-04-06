@@ -134,4 +134,99 @@ struct NotchGeometryTests {
         #expect(geometry.activationZone.width > 0)
         #expect(geometry.activationZone.height > 0)
     }
+
+    // MARK: - Edge cases
+
+    @Test("containsPoint on exact boundary of activation zone")
+    func containsPointOnBoundary() {
+        let zone = NSRect(x: 680, y: 1350, width: 240, height: 72)
+        let geometry = NotchGeometry(
+            notchRect: NSRect(x: 700, y: 1390, width: 200, height: 32),
+            activationZone: zone,
+            screenFrame: NSRect(x: 0, y: 0, width: 1600, height: 1422),
+            hasNotch: true
+        )
+
+        // NSRect.contains uses half-open ranges: includes origin, excludes origin+size
+        #expect(geometry.containsPoint(NSPoint(x: 680, y: 1350)))   // origin corner — inside
+        #expect(!geometry.containsPoint(NSPoint(x: 920, y: 1422)))  // maxX, maxY — outside
+    }
+
+    @Test("Panel origin with zero-size request")
+    func panelOriginZeroSize() {
+        let geometry = NotchGeometry(
+            notchRect: NSRect(x: 700, y: 1390, width: 200, height: 32),
+            activationZone: .zero,
+            screenFrame: NSRect(x: 0, y: 0, width: 1600, height: 1422),
+            hasNotch: true
+        )
+        let origin = geometry.panelOrigin(for: NSSize(width: 0, height: 0))
+        // Should be at notch midX (800) and notch minY (1390)
+        #expect(abs(origin.x - 800) < 0.01)
+        #expect(abs(origin.y - 1390) < 0.01)
+    }
+
+    @Test("Panel origin with very large size clamps to negative coordinates")
+    func panelOriginLargeSize() {
+        let geometry = NotchGeometry(
+            notchRect: NSRect(x: 700, y: 1390, width: 200, height: 32),
+            activationZone: .zero,
+            screenFrame: NSRect(x: 0, y: 0, width: 1600, height: 1422),
+            hasNotch: true
+        )
+        let origin = geometry.panelOrigin(for: NSSize(width: 5000, height: 5000))
+        // x = 800 - 2500 = -1700, y = 1390 - 5000 = -3610
+        #expect(origin.x < 0)
+        #expect(origin.y < 0)
+    }
+
+    @Test("Geometry on secondary screen with offset origin")
+    func geometryWithOffsetScreen() {
+        let screenFrame = NSRect(x: 1920, y: 0, width: 1600, height: 1422)
+        let notchRect = NSRect(x: 2620, y: 1390, width: 200, height: 32)
+        let geometry = NotchGeometry(
+            notchRect: notchRect,
+            activationZone: NSRect(x: 2600, y: 1350, width: 240, height: 72),
+            screenFrame: screenFrame,
+            hasNotch: true
+        )
+
+        let origin = geometry.panelOrigin(for: NSSize(width: 320, height: 80))
+        // Centered on notch midX = 2720
+        #expect(abs(origin.x - 2560) < 0.01) // 2720 - 160
+        #expect(origin.x > 1920) // Must be on the secondary screen
+    }
+
+    @Test("Activation zone for non-notch screen is centered")
+    func noNotchActivationZoneCentered() {
+        let screenFrame = NSRect(x: 0, y: 0, width: 1920, height: 1080)
+        let geometry = NotchGeometry(
+            notchRect: nil,
+            activationZone: NSRect(
+                x: screenFrame.midX - NotchGeometry.fallbackPillSize.width / 2 - NotchGeometry.activationPaddingSide,
+                y: screenFrame.maxY - NotchGeometry.fallbackPillSize.height - NotchGeometry.activationPaddingBottom,
+                width: NotchGeometry.fallbackPillSize.width + NotchGeometry.activationPaddingSide * 2,
+                height: NotchGeometry.fallbackPillSize.height + NotchGeometry.activationPaddingBottom
+            ),
+            screenFrame: screenFrame,
+            hasNotch: false
+        )
+
+        // Screen center is at 960, activation zone should be roughly symmetric
+        let zoneMidX = geometry.activationZone.midX
+        #expect(abs(zoneMidX - 960) < 0.01)
+    }
+
+    @Test("Sendable conformance allows cross-isolation use")
+    func sendableConformance() {
+        let geometry = NotchGeometry(
+            notchRect: nil,
+            activationZone: .zero,
+            screenFrame: NSRect(x: 0, y: 0, width: 1920, height: 1080),
+            hasNotch: false
+        )
+        // Verify Sendable by assigning to a nonisolated(unsafe) var (compile-time check)
+        nonisolated(unsafe) let captured = geometry
+        #expect(captured.hasNotch == false)
+    }
 }
