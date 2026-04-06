@@ -7,17 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-Plan 4: Notch positioning fix (`plan-4-notch-positioning-fix`)
+## [v0.3.0] — 2026-04-06
+
+Plan 4: Notch positioning fix & release automation (`plan-4-notch-positioning-fix`)
 
 ### Fixed
 - Panel Y-coordinate now anchors to screen top edge (`notch.maxY`) instead of notch bottom
 - Window level reduced from `CGShieldingWindowLevel` to `.popUpMenu` so drag-and-drop works
 - Drag destination view properly accepts file drops again
 - Visual effect material upgraded from `.hudWindow` to `.popover` for better translucency
+- Click-through on drag destination view (`hitTest` returns `nil`)
+- Drag destination view moved to topmost in view hierarchy for reliable drop events
 
 ### Changed
 - Refined notch geometry calculations for accurate panel positioning
 - Updated panel and drag destination tests to match corrected behavior
+
+### Added
+- GitHub Actions release workflow (triggered by version tags)
+- `release-package.sh` script for building and packaging `.app` bundles
+- `releases/` directory for release artifacts
 
 ## [v0.2.0] — 2026-04-06
 
@@ -58,6 +67,7 @@ Plan 1: Project scaffolding and core modules (`plan-1-project-setup`)
 - Project documentation: README, CLAUDE.md, DESIGN.md, PLANS.md
 - `.gitignore` with Swift/Xcode/macOS patterns
 
-[Unreleased]: https://github.com/fuyucn/notch-pocket/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/fuyucn/notch-pocket/compare/v0.3.0...HEAD
+[v0.3.0]: https://github.com/fuyucn/notch-pocket/compare/v0.2.0...v0.3.0
 [v0.2.0]: https://github.com/fuyucn/notch-pocket/compare/v0.1.0...v0.2.0
 [v0.1.0]: https://github.com/fuyucn/notch-pocket/releases/tag/v0.1.0
