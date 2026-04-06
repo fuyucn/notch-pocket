@@ -29,10 +29,31 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
 
         // Wire drag destination to shelf manager
         panel.dragDestinationView.fileShelfManager = shelfManager
-        panel.dragDestinationView.onFilesDropped = { [weak panel] count in
+        panel.dragDestinationView.onFilesDropped = { [weak panel, weak shelfManager] count in
             panel?.playDropConfirmation {
-                // After confirmation animation, collapse if desired
+                // After confirmation, expand to show the shelf with thumbnails
+                guard let panel, let manager = shelfManager else { return }
+                panel.fileShelfView.animateAddItems(Array(manager.items.suffix(count)))
+                panel.expandShelf()
             }
+        }
+
+        // Wire shelf view
+        panel.fileShelfView.fileShelfManager = shelfManager
+        panel.fileShelfView.onShelfEmpty = { [weak panel] in
+            panel?.collapse()
+        }
+        panel.fileShelfView.onItemCountChanged = { [weak panel] count in
+            if panel?.panelState == .hidden || panel?.panelState == .listening {
+                panel?.updateBadge(count: count)
+            }
+        }
+
+        // Update shelf view when items change externally (e.g. expiry)
+        shelfManager.onItemsChanged = { [weak panel, weak shelfManager] in
+            guard let panel, let manager = shelfManager else { return }
+            panel.fileShelfView.reload()
+            panel.updateBadge(count: manager.items.count)
         }
 
         detector.onScreenChange = { [weak panel] newGeometry in
