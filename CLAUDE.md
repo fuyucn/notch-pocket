@@ -45,9 +45,9 @@ Before merging any branch into `main`, confirm:
 
 **After merging to `main`** (mandatory — see [Post-Merge Release Checklist](#post-merge-release-checklist-mandatory)):
 
-- [ ] `CHANGELOG.md` updated with new version entry
-- [ ] Annotated git tag created (`git tag -a vX.X.X -m "..."`)
-- [ ] README version badge updated to reflect new version
+- [ ] `CHANGELOG.md` updated with new version entry (SemVer per [Version Tagging](#version-tagging))
+- [ ] README version badge updated to match
+- [ ] Annotated tag on `main` (`git tag -a vX.X.X -m "..."`) and **`git push origin vX.X.X`** to publish via CI
 
 ### Commit Message Convention
 
@@ -61,31 +61,57 @@ Types: `feat`, `fix`, `refactor`, `test`, `docs`, `chore`, `style`, `build`
 
 ### Version Tagging
 
-Follow **Semantic Versioning** (`major.minor.patch`):
+Follow **[Semantic Versioning](https://semver.org/)** — `major.minor.patch` (`vMAJOR.MINOR.PATCH`). **Whenever shippable code changes land on `main`**, the next release must use a tag that reflects the **kind of change** in that release (not arbitrary numbers).
 
-- **major** — Breaking changes or major milestones
-- **minor** — New features, backward-compatible
-- **patch** — Bug fixes, minor improvements
+| Bump | When to increase | Examples |
+|------|-------------------|----------|
+| **MAJOR** | Breaking or incompatible changes for users | Removed menu actions, changed hotkey defaults requiring migration, shelf path/format incompatible with prior versions |
+| **MINOR** | New features or user-visible behavior, **backward compatible** | New setting, new shelf behavior, notch UI tweak that does not break existing flows |
+| **PATCH** | Bug fixes, small corrections, **no new user-facing contract** | Crashes fixed, wrong geometry corrected, internal refactor with same behavior |
+
+- If a single release mixes changes, bump to the **highest** level required (e.g. one breaking change ⇒ major).
+- **Pre-1.0** (`0.y.z`): treat **minor** as meaningful feature lines and **patch** as fixes; reserve **major** (`1.0.0`) for the first stable/API-stable milestone if you adopt that convention.
 
 Tag format: `v0.1.0`, `v0.2.0`, `v1.0.0`
 
-Tags are only applied on the `main` branch after a successful merge.
+Tags are only created on **`main`**, after the relevant work is merged. **CI does not choose or create version numbers** — you assign **SemVer** when you tag.
+
+#### Automated release (GitHub Actions)
+
+Pushing an **annotated tag** matching `v*` triggers `.github/workflows/release.yml`:
+
+1. Verifies the tag points to a commit on **`main`** (not a feature-only branch).
+2. Builds a **universal** (arm64 + x86_64) `Notch Pocket.app` and uploads **`Notch-Pocket-<version>.zip`** to **GitHub Releases**.
+
+So: **versioning is manual and SemVer-driven**; **packaging and publishing the binary** is automatic once the tag is pushed.
+
+```bash
+git push origin v0.X.0
+```
+
+Local packaging without CI: `./release-package.sh` from the repo root (see `DropZone/Info.plist` / `VERSION_OVERRIDE`).
 
 #### Post-Merge Release Checklist (mandatory)
 
-After every merge to `main`, complete the following steps before moving on:
+After every merge to `main` that should produce a release, complete the following before moving on:
 
 1. **Update `CHANGELOG.md`** — Add a new version entry at the top with:
    - Version number and date (`## [v0.X.0] — YYYY-MM-DD`)
    - Summary of changes grouped by type (Added, Changed, Fixed)
    - Reference to the plan/branch that was merged
-2. **Create annotated git tag** — Tag the merge commit on `main`:
+2. **Update `README.md` version badge** — Match the new release version.
+3. **Create annotated git tag on `main`** (SemVer from the table above):
    ```bash
    git tag -a v0.X.0 -m "vX.X.X: short description of release"
    ```
-3. **Update README version badge** — Ensure the version badge in `README.md` reflects the new version.
+4. **Push the tag** — Triggers the Release workflow and publishes the zip:
+   ```bash
+   git push origin v0.X.0
+   ```
 
-All three steps are required. A merge is not considered complete until the tag is created and both files are updated.
+Keep **`DropZone/Info.plist`** version fields (`CFBundleShortVersionString`, `CFBundleVersion`) aligned with the release: locally update before tagging, or rely on CI (`VERSION_OVERRIDE` from the tag in `release-package.sh`) so the shipped `.app` matches the tag.
+
+A release-worthy merge is not complete until `CHANGELOG`, README, tag, and tag push are done (and the workflow succeeds).
 
 ---
 
