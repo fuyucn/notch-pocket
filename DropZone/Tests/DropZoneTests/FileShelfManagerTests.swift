@@ -362,6 +362,73 @@ struct FileShelfManagerTests {
         try? FileManager.default.removeItem(at: shelfDir)
     }
 
+    @Test("Deduplication resolves symlinks so /var and /private/var are treated as same path")
+    func deduplicatesViaSymlinkResolution() throws {
+        let sourceDir = try makeTempDirectory()
+        let (manager, shelfDir) = try makeManager()
+        let fileURL = try makeTestFile(in: sourceDir, name: "symlink-test.txt", content: "data")
+
+        // On macOS, /tmp → /private/tmp and /var → /private/var
+        // Our temp files live under /tmp (or similar), so we can construct an alternate path
+        // by toggling the /private prefix.
+        let path = fileURL.path
+        let alternatePath: String
+        if path.hasPrefix("/private/") {
+            // Strip the /private prefix
+            alternatePath = String(path.dropFirst("/private".count))
+        } else {
+            // Prepend /private
+            alternatePath = "/private" + path
+        }
+        let alternateURL = URL(fileURLWithPath: alternatePath)
+
+        // Verify the alternate path actually points to the same file
+        guard FileManager.default.fileExists(atPath: alternatePath) else {
+            // Skip if the alternate path doesn't exist (not a symlinked dir)
+            try? FileManager.default.removeItem(at: sourceDir)
+            try? FileManager.default.removeItem(at: shelfDir)
+            return
+        }
+
+        let first = manager.addFiles(from: [fileURL])
+        let second = manager.addFiles(from: [alternateURL])
+        #expect(first.count == 1)
+        #expect(second.isEmpty, "Same file via symlink-resolved path should be deduplicated")
+        #expect(manager.items.count == 1)
+
+        try? FileManager.default.removeItem(at: sourceDir)
+        try? FileManager.default.removeItem(at: shelfDir)
+    }
+
+    @Test("Deduplication resolves symlinks within a single batch")
+    func deduplicatesSymlinksInSingleBatch() throws {
+        let sourceDir = try makeTempDirectory()
+        let (manager, shelfDir) = try makeManager()
+        let fileURL = try makeTestFile(in: sourceDir, name: "batch-sym.txt", content: "data")
+
+        let path = fileURL.path
+        let alternatePath: String
+        if path.hasPrefix("/private/") {
+            alternatePath = String(path.dropFirst("/private".count))
+        } else {
+            alternatePath = "/private" + path
+        }
+        let alternateURL = URL(fileURLWithPath: alternatePath)
+
+        guard FileManager.default.fileExists(atPath: alternatePath) else {
+            try? FileManager.default.removeItem(at: sourceDir)
+            try? FileManager.default.removeItem(at: shelfDir)
+            return
+        }
+
+        let added = manager.addFiles(from: [fileURL, alternateURL])
+        #expect(added.count == 1, "Same file via different symlink paths in one batch should add only once")
+        #expect(manager.items.count == 1)
+
+        try? FileManager.default.removeItem(at: sourceDir)
+        try? FileManager.default.removeItem(at: shelfDir)
+    }
+
     @Test("Adding same URL twice in single batch deduplicates")
     func addSameURLInSingleBatch() throws {
         let sourceDir = try makeTempDirectory()

@@ -86,8 +86,9 @@ public final class FileShelfManager {
 
         for url in urls {
             // Skip duplicates — don't add a file that's already on the shelf
-            let standardized = url.standardizedFileURL
-            if items.contains(where: { $0.originalURL.standardizedFileURL == standardized }) {
+            // Resolve symlinks first so /var vs /private/var (and similar) are unified
+            let standardized = url.resolvingSymlinksInPath().standardizedFileURL
+            if items.contains(where: { $0.originalURL.resolvingSymlinksInPath().standardizedFileURL == standardized }) {
                 continue
             }
 
