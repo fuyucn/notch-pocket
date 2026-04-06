@@ -3,9 +3,10 @@ import AppKit
 /// The visual state of the DropZone panel (maps to DESIGN.md state machine).
 public enum PanelState: Sendable {
     case hidden
-    case listening   // Invisible, waiting for drag to enter activation zone
-    case expanded    // Drop zone visible, accepting drops
-    case collapsed   // Collapsing back after drag leaves without drop
+    case listening      // Invisible, waiting for drag to enter activation zone
+    case expanded       // Drop zone visible, accepting drops
+    case shelfExpanded  // Shelf UI visible, showing thumbnails (after drop or click)
+    case collapsed      // Collapsing back after drag leaves without drop
 }
 
 /// A borderless, floating NSPanel that overlays the notch area.
@@ -48,6 +49,16 @@ public final class DropZonePanel: NSPanel {
     /// The drag destination view that handles NSDraggingDestination.
     public let dragDestinationView = DragDestinationView()
 
+    // MARK: - Shelf view
+
+    /// The file shelf view showing thumbnails of shelved files.
+    public let fileShelfView = FileShelfView()
+
+    // MARK: - File count badge
+
+    /// Badge layer showing the number of files on the shelf when collapsed.
+    private var countBadgeLayer: CATextLayer?
+
     // MARK: - Init
 
     public init(geometry: NotchGeometry) {
@@ -75,7 +86,8 @@ public final class DropZonePanel: NSPanel {
 
     private func configurePanelBehavior() {
         isFloatingPanel = true
-        level = .floating
+        // Use screenSaver level to stay above all other windows including fullscreen apps
+        level = .init(rawValue: Int(CGShieldingWindowLevel()) + 1)
         collectionBehavior = [.fullScreenAuxiliary, .stationary, .canJoinAllSpaces]
 
         isOpaque = false
@@ -100,6 +112,11 @@ public final class DropZonePanel: NSPanel {
         dragDestinationView.frame = contentView.bounds
         dragDestinationView.autoresizingMask = [.width, .height]
         contentView.addSubview(dragDestinationView)
+
+        // Add file shelf view on top of drag destination
+        fileShelfView.frame = contentView.bounds
+        fileShelfView.autoresizingMask = [.width, .height]
+        contentView.addSubview(fileShelfView)
     }
 
     // MARK: - NSPanel overrides
@@ -107,12 +124,19 @@ public final class DropZonePanel: NSPanel {
     override public var canBecomeKey: Bool { true }
     override public var canBecomeMain: Bool { false }
 
+    // MARK: - Shelf expanded size
+
+    /// Size of the panel when showing the file shelf with thumbnails.
+    public static let shelfExpandedSize = NSSize(width: 420, height: 100)
+
     // MARK: - State transitions
 
     /// Transition to the expanded (drop zone visible) state.
     public func expand() {
         guard panelState != .expanded else { return }
         panelState = .expanded
+
+        fileShelfView.isHidden = false
 
         let targetSize = NotchGeometry.expandedSize
         let targetOrigin = geometry.panelOrigin(for: targetSize)
@@ -132,9 +156,36 @@ public final class DropZonePanel: NSPanel {
         }
     }
 
+    /// Expand the panel to show the file shelf with thumbnails.
+    public func expandShelf() {
+        guard panelState != .shelfExpanded else { return }
+        panelState = .shelfExpanded
+
+        fileShelfView.isHidden = false
+        hideBadge()
+
+        let targetSize = Self.shelfExpandedSize
+        let targetOrigin = geometry.panelOrigin(for: targetSize)
+        let targetFrame = NSRect(origin: targetOrigin, size: targetSize)
+
+        if !isVisible {
+            alphaValue = 0
+            orderFrontRegardless()
+        }
+
+        NSAnimationContext.runAnimationGroup { context in
+            context.duration = Self.expandDuration
+            context.timingFunction = CAMediaTimingFunction(controlPoints: 0.2, 0.9, 0.3, 1.0)
+            context.allowsImplicitAnimation = true
+
+            self.animator().setFrame(targetFrame, display: true)
+            self.animator().alphaValue = 1
+        }
+    }
+
     /// Collapse the panel back to hidden.
     public func collapse(completion: (@Sendable () -> Void)? = nil) {
-        guard panelState == .expanded else {
+        guard panelState == .expanded || panelState == .shelfExpanded else {
             completion?()
             return
         }
@@ -179,6 +230,86 @@ public final class DropZonePanel: NSPanel {
         panelState = .hidden
     }
 
+    // MARK: - File count badge
+
+    /// Show or update the file count badge on the collapsed panel.
+    public func updateBadge(count: Int) {
+        guard count > 0 else {
+            hideBadge()
+            return
+        }
+
+        guard let contentLayer = contentView?.layer else { return }
+
+        if countBadgeLayer == nil {
+            let badge = CATextLayer()
+            badge.fontSize = 10
+            badge.font = NSFont.systemFont(ofSize: 10, weight: .bold)
+            badge.foregroundColor = NSColor.white.cgColor
+            badge.backgroundColor = NSColor.systemRed.cgColor
+            badge.cornerRadius = 8
+            badge.alignmentMode = .center
+            badge.contentsScale = NSScreen.main?.backingScaleFactor ?? 2.0
+            badge.masksToBounds = true
+            contentLayer.addSublayer(badge)
+            countBadgeLayer = badge
+        }
+
+        guard let badge = countBadgeLayer else { return }
+        let text = count > 99 ? "99+" : "\(count)"
+        badge.string = text
+
+        let textWidth = max(CGFloat(text.count) * 7 + 6, 16)
+        let badgeSize = CGSize(width: textWidth, height: 16)
+        badge.frame = CGRect(
+            x: contentLayer.bounds.maxX - badgeSize.width - 4,
+            y: contentLayer.bounds.maxY - badgeSize.height - 4,
+            width: badgeSize.width,
+            height: badgeSize.height
+        )
+    }
+
+    /// Hide the file count badge.
+    public func hideBadge() {
+        countBadgeLayer?.removeFromSuperlayer()
+        countBadgeLayer = nil
+    }
+
+    // MARK: - Mouse hover tracking
+
+    private var trackingArea: NSTrackingArea?
+
+    /// Set up a tracking area over the activation zone to detect mouse hover.
+    /// When the user hovers over the notch area and files are on the shelf,
+    /// the panel expands to show the shelf.
+    public func setupHoverTracking() {
+        guard let contentView else { return }
+        if let existing = trackingArea {
+            contentView.removeTrackingArea(existing)
+        }
+        let area = NSTrackingArea(
+            rect: contentView.bounds,
+            options: [.mouseEnteredAndExited, .activeAlways, .inVisibleRect],
+            owner: self,
+            userInfo: nil
+        )
+        contentView.addTrackingArea(area)
+        trackingArea = area
+    }
+
+    /// Callback when mouse hovers over the panel (for shelf reveal).
+    public var onMouseEntered: (@MainActor () -> Void)?
+    /// Callback when mouse leaves the panel.
+    public var onMouseExited: (@MainActor () -> Void)?
+
+    public override func mouseEntered(with event: NSEvent) {
+        onMouseEntered?()
+    }
+
+    public override func mouseExited(with event: NSEvent) {
+        onMouseExited?()
+    }
+
     // MARK: - Repositioning
 
     /// Update frame to match current geometry and state.
@@ -189,6 +320,10 @@ public final class DropZonePanel: NSPanel {
             break
         case .expanded:
             let targetSize = NotchGeometry.expandedSize
+            let targetOrigin = geometry.panelOrigin(for: targetSize)
+            setFrame(NSRect(origin: targetOrigin, size: targetSize), display: true)
+        case .shelfExpanded:
+            let targetSize = Self.shelfExpandedSize
             let targetOrigin = geometry.panelOrigin(for: targetSize)
             setFrame(NSRect(origin: targetOrigin, size: targetSize), display: true)
         }

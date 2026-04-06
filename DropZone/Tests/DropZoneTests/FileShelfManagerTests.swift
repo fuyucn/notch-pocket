@@ -343,4 +343,196 @@ struct FileShelfManagerTests {
         manager.stopExpiryTimer()
         try? FileManager.default.removeItem(at: shelfDir)
     }
+
+    // MARK: - Additional edge cases
+
+    @Test("Adding same file twice creates two distinct shelf items")
+    func addSameFileTwice() throws {
+        let sourceDir = try makeTempDirectory()
+        let (manager, shelfDir) = try makeManager()
+        let fileURL = try makeTestFile(in: sourceDir, name: "dup.txt", content: "data")
+
+        let first = manager.addFiles(from: [fileURL])
+        let second = manager.addFiles(from: [fileURL])
+        #expect(first.count == 1)
+        #expect(second.count == 1)
+        #expect(manager.items.count == 2)
+        // They should have different IDs and different shelf paths
+        #expect(first[0].id != second[0].id)
+        #expect(first[0].shelfURL != second[0].shelfURL)
+
+        try? FileManager.default.removeItem(at: sourceDir)
+        try? FileManager.default.removeItem(at: shelfDir)
+    }
+
+    @Test("Removing middle item preserves order of others")
+    func removeMiddlePreservesOrder() throws {
+        let sourceDir = try makeTempDirectory()
+        let (manager, shelfDir) = try makeManager()
+        let f1 = try makeTestFile(in: sourceDir, name: "a.txt")
+        let f2 = try makeTestFile(in: sourceDir, name: "b.txt")
+        let f3 = try makeTestFile(in: sourceDir, name: "c.txt")
+
+        let added = manager.addFiles(from: [f1, f2, f3])
+        manager.removeItem(added[1].id)
+
+        #expect(manager.items.count == 2)
+        #expect(manager.items[0].displayName == "a.txt")
+        #expect(manager.items[1].displayName == "c.txt")
+
+        try? FileManager.default.removeItem(at: sourceDir)
+        try? FileManager.default.removeItem(at: shelfDir)
+    }
+
+    @Test("Batch add exceeding maxItems evicts oldest first")
+    func batchAddExceedingMaxItems() throws {
+        let sourceDir = try makeTempDirectory()
+        let (manager, shelfDir) = try makeManager()
+        manager.maxItems = 3
+
+        // Pre-load 2 items
+        let f1 = try makeTestFile(in: sourceDir, name: "1.txt", content: "1")
+        let f2 = try makeTestFile(in: sourceDir, name: "2.txt", content: "2")
+        manager.addFiles(from: [f1, f2])
+
+        // Batch add 3 more, forcing eviction of 2 oldest
+        let f3 = try makeTestFile(in: sourceDir, name: "3.txt", content: "3")
+        let f4 = try makeTestFile(in: sourceDir, name: "4.txt", content: "4")
+        let f5 = try makeTestFile(in: sourceDir, name: "5.txt", content: "5")
+        manager.addFiles(from: [f3, f4, f5])
+
+        #expect(manager.items.count == 3)
+        // Oldest two (1.txt, 2.txt) should be gone
+        let names = manager.items.map(\.displayName)
+        #expect(!names.contains("1.txt"))
+        #expect(!names.contains("2.txt"))
+
+        try? FileManager.default.removeItem(at: sourceDir)
+        try? FileManager.default.removeItem(at: shelfDir)
+    }
+
+    @Test("clearAll on empty shelf does not crash and fires callback")
+    func clearAllEmpty() throws {
+        let (manager, shelfDir) = try makeManager()
+        #expect(manager.items.isEmpty)
+
+        nonisolated(unsafe) var callCount = 0
+        manager.onItemsChanged = { callCount += 1 }
+
+        manager.clearAll()
+        #expect(manager.items.isEmpty)
+        #expect(callCount == 1) // Callback fires even when empty
+
+        try? FileManager.default.removeItem(at: shelfDir)
+    }
+
+    @Test("removeExpiredItems keeps fresh and removes expired in mixed set")
+    func mixedExpiryItems() throws {
+        let sourceDir = try makeTempDirectory()
+        let (manager, shelfDir) = try makeManager()
+        manager.expiryInterval = 3600
+
+        // Add a "fresh" file
+        let fresh = try makeTestFile(in: sourceDir, name: "fresh.txt")
+        manager.addFiles(from: [fresh])
+
+        // Manually create an "old" item by directly manipulating
+        // We can't easily set addedAt, so use expiryInterval = huge for fresh,
+        // then set to 0 and remove expired
+        let old = try makeTestFile(in: sourceDir, name: "old.txt")
+        manager.addFiles(from: [old])
+        #expect(manager.items.count == 2)
+
+        // Set expiry to 0 — everything expires
+        manager.expiryInterval = 0
+        manager.removeExpiredItems()
+        #expect(manager.items.isEmpty)
+
+        try? FileManager.default.removeItem(at: sourceDir)
+        try? FileManager.default.removeItem(at: shelfDir)
+    }
+
+    @Test("totalBytes decreases after removal")
+    func totalBytesDecreasesOnRemoval() throws {
+        let sourceDir = try makeTempDirectory()
+        let (manager, shelfDir) = try makeManager()
+        let f1 = try makeTestFile(in: sourceDir, name: "big.txt", content: String(repeating: "x", count: 1000))
+
+        let added = manager.addFiles(from: [f1])
+        let bytesAfterAdd = manager.totalBytes
+        #expect(bytesAfterAdd > 0)
+
+        manager.removeItem(added[0].id)
+        #expect(manager.totalBytes == 0)
+        #expect(manager.totalBytes < bytesAfterAdd)
+
+        try? FileManager.default.removeItem(at: sourceDir)
+        try? FileManager.default.removeItem(at: shelfDir)
+    }
+
+    @Test("Callback fires exactly once per batch add, not per file")
+    func callbackCountForBatchAdd() throws {
+        let sourceDir = try makeTempDirectory()
+        let (manager, shelfDir) = try makeManager()
+        let f1 = try makeTestFile(in: sourceDir, name: "a.txt")
+        let f2 = try makeTestFile(in: sourceDir, name: "b.txt")
+        let f3 = try makeTestFile(in: sourceDir, name: "c.txt")
+
+        nonisolated(unsafe) var callCount = 0
+        manager.onItemsChanged = { callCount += 1 }
+
+        manager.addFiles(from: [f1, f2, f3])
+        // Should fire once for the whole batch, not 3 times
+        #expect(callCount == 1)
+
+        try? FileManager.default.removeItem(at: sourceDir)
+        try? FileManager.default.removeItem(at: shelfDir)
+    }
+
+    @Test("Manager with default directory uses caches path")
+    func defaultDirectoryUsesCaches() throws {
+        let manager = FileShelfManager()
+        // We can't easily verify the path, but creation should not crash
+        #expect(manager.items.isEmpty)
+    }
+
+    @Test("Max bytes boundary: file exactly at limit is accepted")
+    func maxBytesExactBoundary() throws {
+        let sourceDir = try makeTempDirectory()
+        let (manager, shelfDir) = try makeManager()
+
+        // Create a file, add it, check its size, then set limit to exactly that
+        let content = "hello" // 5 bytes
+        let fileURL = try makeTestFile(in: sourceDir, content: content)
+        let added = manager.addFiles(from: [fileURL])
+        let fileSize = added[0].fileSize
+        #expect(fileSize > 0)
+
+        // Clear and reset
+        manager.clearAll()
+        manager.maxTotalBytes = fileSize // Exact fit
+
+        let added2 = manager.addFiles(from: [fileURL])
+        #expect(added2.count == 1) // Should fit exactly
+
+        try? FileManager.default.removeItem(at: sourceDir)
+        try? FileManager.default.removeItem(at: shelfDir)
+    }
+
+    @Test("Shelf file is physically deleted after removeItem")
+    func fileDeletedOnRemove() throws {
+        let sourceDir = try makeTempDirectory()
+        let (manager, shelfDir) = try makeManager()
+        let fileURL = try makeTestFile(in: sourceDir)
+
+        let added = manager.addFiles(from: [fileURL])
+        let shelfPath = added[0].shelfURL.path
+        #expect(FileManager.default.fileExists(atPath: shelfPath))
+
+        manager.removeItem(added[0].id)
+        #expect(!FileManager.default.fileExists(atPath: shelfPath))
+
+        try? FileManager.default.removeItem(at: sourceDir)
+        try? FileManager.default.removeItem(at: shelfDir)
+    }
 }

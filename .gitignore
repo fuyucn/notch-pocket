@@ -5,15 +5,30 @@ DerivedData/
 *.xcworkspace/xcuserdata/
 *.xcodeproj/project.xcworkspace/xcshareddata/IDEWorkspaceChecks.plist
 xcuserdata/
+*.xccheckout
+*.xcscmblueprint
 
 # Swift Package Manager
 .build/
+.swiftpm/
 Packages/
 Package.resolved
 
+# Debug symbols
+*.dSYM/
+*.dSYM.zip
+
 # macOS
 .DS_Store
+.AppleDouble
+.LSOverride
+._*
+.Spotlight-V100
+.Trashes
+
+# Editor temp files
 *.swp
+*.swo
 *~
 
 # IDE
@@ -21,15 +36,58 @@ Package.resolved
 *.code-workspace
 .vscode/
 
-# Archives
+# Archives & builds
+*.app
 *.ipa
 *.dSYM.zip
-*.dSYM
+*.xcarchive
 
-# Signing
-*.mobileprovision
+# Signing (iOS-specific)
+*.mobileprovision        # iOS provisioning profiles
 *.provisionprofile
 
-# Env
+# Code coverage
+*.gcno
+*.gcda
+codecov/
+
+# Secrets & credentials — NEVER commit these
 .env
+.env.*
 .env.local
+*.secret
+*.secrets
+secrets/
+credentials/
+*_token.json
+.token
+
+# Certificates, keys & signing identities
+*.pem
+*.p12
+*.key
+*.cer
+*.certSigningRequest
+
+# macOS Keychain
+*.keychain
+*.keychain-db
+
+# SSH keys (in case accidentally placed in repo)
+id_rsa
+id_rsa.pub
+id_ed25519
+id_ed25519.pub
+
+# Playground
+*.playground/timeline.xctimeline
+*.playground/playground.xcworkspace
+
+# AI assistant / editor local config
+.claude/
+.cursor/
+.aider*
+.copilot/
+
+# Crash logs
+*.crash

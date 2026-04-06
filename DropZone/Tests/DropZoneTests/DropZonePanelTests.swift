@@ -51,11 +51,12 @@ struct DropZonePanelTests {
         #expect(panel.styleMask.contains(.fullSizeContentView))
     }
 
-    @Test("Panel is floating at floating level")
+    @Test("Panel is floating above all other windows")
     func panelIsFloating() {
         let panel = DropZonePanel(geometry: makeTestGeometry(hasNotch: true))
         #expect(panel.isFloatingPanel)
-        #expect(panel.level == .floating)
+        // Panel should be above the shielding window level
+        #expect(panel.level.rawValue > Int(CGShieldingWindowLevel()))
     }
 
     @Test("Panel is transparent with clear background")
@@ -130,12 +131,107 @@ struct DropZonePanelTests {
         #expect(completed, "Completion should fire immediately when not expanded")
     }
 
+    // MARK: - Shelf expanded state
+
+    @Test("expandShelf sets state to shelfExpanded")
+    func expandShelfSetsState() {
+        let panel = DropZonePanel(geometry: makeTestGeometry(hasNotch: true))
+        panel.expandShelf()
+        #expect(panel.panelState == .shelfExpanded)
+    }
+
+    @Test("expandShelf is idempotent")
+    func expandShelfIdempotent() {
+        let panel = DropZonePanel(geometry: makeTestGeometry(hasNotch: true))
+        panel.expandShelf()
+        panel.expandShelf()
+        #expect(panel.panelState == .shelfExpanded)
+    }
+
+    @Test("collapse works from shelfExpanded state")
+    func collapseFromShelfExpanded() {
+        let panel = DropZonePanel(geometry: makeTestGeometry(hasNotch: true))
+        panel.expandShelf()
+        #expect(panel.panelState == .shelfExpanded)
+        // collapse starts animation; it should set state to .collapsed
+        panel.collapse()
+        #expect(panel.panelState == .collapsed)
+    }
+
+    @Test("shelfExpanded panel has correct size")
+    func shelfExpandedSize() {
+        let panel = DropZonePanel(geometry: makeTestGeometry(hasNotch: true))
+        panel.expandShelf()
+        let expectedSize = DropZonePanel.shelfExpandedSize
+        #expect(panel.frame.size.width == expectedSize.width)
+        #expect(panel.frame.size.height == expectedSize.height)
+    }
+
+    // MARK: - File count badge
+
+    @Test("updateBadge creates badge layer")
+    func updateBadgeCreates() {
+        let panel = DropZonePanel(geometry: makeTestGeometry(hasNotch: true))
+        panel.expand() // Need content view to be active
+        panel.updateBadge(count: 5)
+        // Badge should exist in content view layer
+        let badgeLayers = panel.contentView?.layer?.sublayers?.filter {
+            $0 is CATextLayer
+        }
+        #expect(badgeLayers?.isEmpty == false)
+    }
+
+    @Test("updateBadge with zero hides badge")
+    func updateBadgeZeroHides() {
+        let panel = DropZonePanel(geometry: makeTestGeometry(hasNotch: true))
+        panel.expand()
+        panel.updateBadge(count: 3)
+        panel.updateBadge(count: 0)
+        let badgeLayers = panel.contentView?.layer?.sublayers?.filter {
+            $0 is CATextLayer
+        }
+        #expect(badgeLayers?.isEmpty ?? true)
+    }
+
+    @Test("hideBadge removes badge layer")
+    func hideBadgeRemoves() {
+        let panel = DropZonePanel(geometry: makeTestGeometry(hasNotch: true))
+        panel.expand()
+        panel.updateBadge(count: 2)
+        panel.hideBadge()
+        let badgeLayers = panel.contentView?.layer?.sublayers?.filter {
+            $0 is CATextLayer
+        }
+        #expect(badgeLayers?.isEmpty ?? true)
+    }
+
+    // MARK: - FileShelfView integration
+
+    @Test("Panel has fileShelfView as subview")
+    func panelHasFileShelfView() {
+        let panel = DropZonePanel(geometry: makeTestGeometry(hasNotch: true))
+        let shelfViews = panel.contentView?.subviews.compactMap { $0 as? FileShelfView }
+        #expect(shelfViews?.count == 1)
+    }
+
     // MARK: - Geometry update
 
     @Test("Geometry update repositions expanded panel")
     func geometryUpdateRepositions() {
         let panel = DropZonePanel(geometry: makeTestGeometry(hasNotch: true))
         panel.expand()
+
+        let frameBefore = panel.frame
+        panel.geometry = makeTestGeometry(hasNotch: false)
+        let frameAfter = panel.frame
+
+        #expect(frameBefore.origin != frameAfter.origin)
+    }
+
+    @Test("Geometry update repositions shelfExpanded panel")
+    func geometryUpdateRepositionsShelf() {
+        let panel = DropZonePanel(geometry: makeTestGeometry(hasNotch: true))
+        panel.expandShelf()
 
         let frameBefore = panel.frame
         panel.geometry = makeTestGeometry(hasNotch: false)

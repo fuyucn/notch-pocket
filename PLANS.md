@@ -1,4 +1,4 @@
-# DropZone — Plan 清单
+# Notch Pocket — Plan 清单
 
 > 每个 plan 对应一个可独立交付的功能模块，按依赖顺序排列。
 
@@ -43,7 +43,7 @@
 ### Plan 3: 全局 Drag 监听 — `plan-3-drag-monitor`
 **状态**: `planned`
 **依赖**: Plan 2
-**目标**: 实现系统级拖拽会话检测，当用户在任何应用拖拽文件时激活 DropZone。
+**目标**: 实现系统级拖拽会话检测，当用户在任何应用拖拽文件时激活 Notch Pocket。
 **功能范围**:
 - DragMonitor：通过 `NSEvent.addGlobalMonitorForEvents` 监听全局拖拽事件
 - 检测 `NSPasteboard(name: .drag)` 中的文件内容
@@ -167,9 +167,9 @@
 ### Plan 11: 多显示器支持 — `plan-11-multi-monitor`
 **状态**: `planned`
 **依赖**: Plan 2, Plan 6
-**目标**: 完善多显示器场景下的 DropZone 体验。
+**目标**: 完善多显示器场景下的 Notch Pocket 体验。
 **功能范围**:
-- 多屏 DropZone 实例管理（每屏一个面板）
+- 多屏 Notch Pocket 实例管理（每屏一个面板）
 - Notch 屏 + 非 notch 外接屏混合场景
 - 屏幕热插拔（connect/disconnect）时面板重新定位（< 500ms）
 - 跨屏拖拽时的 activation zone 检测

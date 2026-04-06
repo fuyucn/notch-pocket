@@ -1,98 +1,242 @@
-# DropZone
+# Notch Pocket
 
-一款 macOS 应用，将 MacBook 的 notch（刘海）区域变为临时文件中转架，通过拖放操作实现跨窗口、跨空间的无摩擦文件传输。
+> **Note:** This is an AI-generated side project — built collaboratively with AI assistance.
 
-## 功能简介
+A macOS app that transforms your MacBook's notch into a temporary file shelf — a pocket right in the notch — enabling frictionless cross-window, cross-space file transfers via drag-and-drop.
 
-- 拖拽文件到 notch 区域即可暂存，释放鼠标后自由切换工作上下文
-- 从 notch 中转架拖出文件到目标位置，完成传输
-- 支持多文件批量拖放、缩略图预览
-- 文件自动过期清理，默认 1 小时
-- 支持有 notch 和无 notch 的 Mac 屏幕
-- 支持多显示器
+![macOS 14+](https://img.shields.io/badge/macOS-14%2B-blue)
+![Swift 6.0](https://img.shields.io/badge/Swift-6.0-orange)
+![License](https://img.shields.io/badge/license-MIT-green)
 
-## 技术栈
+## Features
 
-| 项目 | 说明 |
-|------|------|
-| 语言 | Swift 6.0 |
-| 框架 | SwiftUI + AppKit |
-| 最低系统 | macOS 14 Sonoma |
-| 构建系统 | Swift Package Manager (SPM) |
-| 测试框架 | Swift Testing |
+- **Notch as a drop zone** — Drag files onto the notch area to temporarily shelve them, then freely switch contexts
+- **Drag out to retrieve** — Hover over the notch to expand the shelf, then drag files to their destination
+- **Multi-file batch drop** — Drop multiple files at once; all are shelved with thumbnail previews
+- **Auto-expire cleanup** — Shelved files automatically expire after a configurable period (default: 1 hour)
+- **Notch & non-notch support** — Works on MacBooks with a notch and falls back to a floating pill on older Macs or external displays
+- **Multi-monitor** — Detects screen configurations and repositions the panel on display changes
+- **Keyboard shortcut** — Toggle the shelf with a configurable global hotkey (default: `⌘ + Shift + D`)
+- **Settings panel** — Configure expiration time, storage limits, launch at login, and more
+- **Menu bar integration** — Quick access via a status bar icon with file count badge
 
-## 开发环境搭建
+<!-- ## Screenshots
 
-### 前置要求
+> Screenshots will be added after the first public release.
 
-- macOS 14 Sonoma 或更高版本
-- Xcode 16+ （需要完整安装，非仅 Command Line Tools）
+| Drop zone expanded | Shelf with files | Settings |
+|---|---|---|
+| ![Drop zone](screenshots/dropzone-expanded.png) | ![Shelf](screenshots/shelf-view.png) | ![Settings](screenshots/settings.png) | -->
 
-### DEVELOPER_DIR 设置
+## Requirements
 
-运行测试时需要确保 `DEVELOPER_DIR` 指向 Xcode 安装路径。如果你的默认开发工具指向 Command Line Tools，请先执行：
+- macOS 14 Sonoma or later
+- Xcode 16+ (full installation, not just Command Line Tools)
 
-```bash
-export DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
-```
+## Installation
 
-或通过 `xcode-select` 永久设置：
-
-```bash
-sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
-```
-
-### 构建与测试
+### Build from Source
 
 ```bash
-# 构建项目
-cd DropZone
+git clone https://github.com/fuyucn/dropzone.git
+cd dropzone/DropZone
+
+# Debug build
 swift build
 
-# 运行测试
-swift test
-
-# Release 构建
+# Release build
 swift build -c release
 ```
 
-## 项目结构
+The built executable is located at `.build/release/DropZone`.
+
+### Xcode
+
+Open `DropZone/Package.swift` in Xcode, select the `DropZone` scheme, and run.
+
+## Usage
+
+1. **Launch** — Run Notch Pocket. A menu bar icon appears in the status bar.
+2. **Shelve files** — Start dragging any file. The notch area activates automatically. Drop the file onto it.
+3. **Switch context** — Navigate to your target app, folder, or Space. Your hands are free.
+4. **Retrieve files** — Hover over the notch to expand the shelf. Drag your file out to the destination.
+5. **Manage** — Right-click the menu bar icon to clear the shelf, open settings, or quit.
+
+### Keyboard Shortcuts
+
+| Shortcut | Action |
+|----------|--------|
+| `⌘ + Shift + D` | Toggle shelf visibility (configurable) |
+| Hover over notch | Expand shelf to see thumbnails |
+
+### Menu Bar
+
+The status bar icon shows the current shelved file count. Click it to access:
+
+- **Show Shelf** — Expand the shelf panel
+- **Settings** — Open the preferences window
+- **Clear All** — Remove all shelved files
+- **Quit** — Exit Notch Pocket
+
+## Configuration
+
+Access settings via the menu bar icon → **Settings**, or use the keyboard shortcut.
+
+| Setting | Default | Range |
+|---------|---------|-------|
+| Auto-expire duration | 1 hour | 15 min – 24 hours |
+| Max shelf items | 50 | 10 – 200 |
+| Max shelf storage | 2 GB | 500 MB – 10 GB |
+| Launch at login | Off | On / Off |
+| Global shortcut | `⌘ + Shift + D` | Customizable |
+
+Files are stored temporarily in `~/Library/Caches/com.dropzone.app/shelf/`. Hard-links are used when files are on the same volume; cross-volume files are copied.
+
+## Project Structure
 
 ```
 dropzone/
-├── CLAUDE.md                 # 开发规范与工作流
-├── DESIGN.md                 # 产品设计文档
-├── README.md                 # 本文件
-├── DropZone/                 # Swift Package 根目录
-│   ├── Package.swift         # SPM 配置（macOS 14+）
-│   ├── Info.plist            # 应用信息配置
-│   ├── DropZone.entitlements # 应用权限声明
+├── CLAUDE.md                          # Development guidelines
+├── DESIGN.md                          # Product design document
+├── PLANS.md                           # Implementation roadmap
+├── README.md                          # This file
+├── DropZone/
+│   ├── Package.swift                  # SPM config (macOS 14+)
+│   ├── Info.plist                     # App metadata
+│   ├── DropZone.entitlements          # App entitlements
 │   ├── Sources/
-│   │   ├── DropZone/         # 可执行目标（入口）
-│   │   │   └── main.swift
-│   │   └── DropZoneLib/      # 核心库目标
-│   │       ├── AppDelegate.swift        # 应用生命周期管理
-│   │       ├── StatusBarController.swift # 菜单栏图标控制
-│   │       ├── DropZonePanel.swift       # 浮动面板窗口
-│   │       ├── NotchGeometry.swift       # Notch 区域几何计算
-│   │       └── ScreenDetector.swift      # 屏幕检测（notch/非 notch）
+│   │   ├── DropZone/
+│   │   │   └── main.swift             # App entry point
+│   │   └── DropZoneLib/               # Core library
+│   │       ├── AppDelegate.swift              # App lifecycle, wiring
+│   │       ├── DropZonePanel.swift            # Floating notch panel (NSPanel)
+│   │       ├── DragDestinationView.swift      # Drop target (NSDraggingDestination)
+│   │       ├── GlobalDragMonitor.swift        # System-wide drag detection
+│   │       ├── FileShelfManager.swift         # File storage, expiry, capacity
+│   │       ├── FileShelfView.swift            # Shelf grid UI (SwiftUI)
+│   │       ├── FileThumbnailView.swift        # Thumbnail generation & display
+│   │       ├── NotchGeometry.swift            # Notch rect & activation zone
+│   │       ├── ScreenDetector.swift           # Screen detection & observation
+│   │       ├── StatusBarController.swift      # Menu bar icon & menu
+│   │       ├── SettingsManager.swift          # UserDefaults-backed settings
+│   │       ├── SettingsView.swift             # Preferences UI (SwiftUI)
+│   │       ├── SettingsWindowController.swift # Settings window management
+│   │       └── KeyboardShortcutManager.swift  # Global hotkey (Carbon)
 │   └── Tests/
-│       └── DropZoneTests/    # 单元测试
+│       └── DropZoneTests/             # Unit tests (Swift Testing)
 │           ├── AppDelegateTests.swift
+│           ├── DragDestinationViewTests.swift
 │           ├── DropZonePanelTests.swift
+│           ├── FileShelfManagerTests.swift
+│           ├── FileShelfViewTests.swift
+│           ├── FileThumbnailViewTests.swift
+│           ├── GlobalDragMonitorTests.swift
+│           ├── KeyboardShortcutManagerTests.swift
 │           ├── NotchGeometryTests.swift
-│           └── ScreenDetectorTests.swift
-└── research/                 # 技术调研文档
+│           ├── ScreenDetectorTests.swift
+│           └── SettingsManagerTests.swift
+└── research/                          # Technical research notes
 ```
 
-### SPM Target 说明
+### SPM Targets
 
-| Target | 类型 | 说明 |
-|--------|------|------|
-| `DropZoneLib` | Library | 核心库，包含所有业务逻辑，供测试导入 |
-| `DropZone` | Executable | 应用入口，依赖 `DropZoneLib` |
-| `DropZoneTests` | Test | 单元测试，依赖 `DropZoneLib` |
+| Target | Type | Description |
+|--------|------|-------------|
+| `DropZoneLib` | Library | Core library with all business logic; imported by tests |
+| `DropZone` | Executable | App entry point; depends on `DropZoneLib` |
+| `DropZoneTests` | Test | Unit tests; depends on `DropZoneLib` |
 
-## 许可证
+## Tech Stack
 
-待定
+| Component | Technology |
+|-----------|-----------|
+| Language | Swift 6.0 (strict concurrency) |
+| UI | SwiftUI + AppKit |
+| Build System | Swift Package Manager |
+| Minimum OS | macOS 14 Sonoma |
+| Testing | Swift Testing framework |
+| Thumbnails | QuickLook (`QLThumbnailGenerator`) |
+| Global Hotkey | Carbon Events API |
+| Settings | UserDefaults via `@AppStorage` |
+
+## Development
+
+### Building
+
+```bash
+cd DropZone
+swift build
+```
+
+### Running Tests
+
+```bash
+cd DropZone
+swift test
+```
+
+> **Note**: Ensure `DEVELOPER_DIR` points to your Xcode installation, not Command Line Tools:
+> ```bash
+> sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
+> ```
+
+### Branch Conventions
+
+All development follows a branch-per-plan workflow. See [CLAUDE.md](CLAUDE.md) for full details.
+
+- Feature branches: `plan-{number}-{short-description}`
+- Hotfix branches: `hotfix-{number}-{short-description}`
+- Merge to `main` via `--no-ff` after all tests pass
+
+### Commit Messages
+
+```
+type: short description
+```
+
+Types: `feat`, `fix`, `refactor`, `test`, `docs`, `chore`, `style`, `build`
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch from `main` (`plan-N-description` or `feature/description`)
+3. Make your changes, ensuring:
+   - All existing tests pass
+   - New functionality has corresponding tests
+   - No compiler warnings introduced
+   - Code builds in both Debug and Release
+4. Submit a pull request with a clear description
+
+### Code Style
+
+- Follow Swift 6 strict concurrency conventions
+- Use `@MainActor` for UI-bound code
+- Prefer SwiftUI for views, AppKit for system-level integration
+- Keep files focused — one primary type per file
+
+## Roadmap
+
+See [PLANS.md](PLANS.md) for the full implementation roadmap. Current status:
+
+- [x] Plan 1 — Project setup & scaffolding
+- [x] Plan 2 — Notch detection & floating panel
+- [x] Plan 3 — Global drag monitoring, file shelf, thumbnails, drag-out, settings
+- [ ] Plan 7 — File expiry & storage management
+- [ ] Plan 8 — Animations & visual polish
+- [ ] Plan 10 — Accessibility
+- [ ] Plan 11 — Multi-monitor support
+- [ ] Plan 12 — Edge cases & robustness
+- [ ] Plan 13 — Performance optimization
+
+## License
+
+MIT License. See [LICENSE](LICENSE) for details.
+
+## Acknowledgments
+
+Inspired by:
+
+- [NotchDrop](https://github.com/Lakr233/NotchDrop) — File shelf in the notch
+- [TheBoringNotch](https://github.com/TheBoredTeam/boring.notch) — Architecture patterns
+- [DynamicNotchKit](https://github.com/MrKai77/DynamicNotchKit) — Notch UI framework
+- [Atoll](https://github.com/Ebullioscopic/Atoll) — Animation patterns

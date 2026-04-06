@@ -1,10 +1,10 @@
-# DropZone — Product Design Document
+# Notch Pocket — Product Design Document
 
 > A macOS app that transforms the notch into a temporary file shelf, enabling frictionless cross-context file transfers via drag-and-drop.
 
 **Version**: 1.0  
 **Last Updated**: 2026-04-06  
-**Status**: Draft  
+**Status**: In Development (Plans 1–3 implemented)  
 **Minimum macOS**: 14 Sonoma
 
 ---
@@ -33,7 +33,7 @@ Moving files between different locations on macOS is friction-heavy. Users must 
 
 ### Solution
 
-**DropZone** turns the MacBook notch area into a "Dynamic Island" — a persistent, always-accessible drop zone. Users drag files onto the notch, release them, switch to their destination, then drag the files back out. No button-holding across windows. No Desktop clutter.
+**Notch Pocket** turns the MacBook notch area into a "Dynamic Island" — a persistent, always-accessible drop zone. Users drag files onto the notch, release them, switch to their destination, then drag the files back out. No button-holding across windows. No Desktop clutter.
 
 ### Core Principles
 
@@ -73,9 +73,9 @@ Moving files between different locations on macOS is friction-heavy. Users must 
 | US-7 | Mac user | hover over the notch to see shelved files | I can check what's stored without dragging | P1 |
 | US-8 | Mac user | remove individual files from the shelf | I can clean up files I no longer need | P1 |
 | US-9 | Mac user | clear all files from the shelf at once | I can start fresh quickly | P2 |
-| US-10 | Mac user | use DropZone on a Mac without a notch | the app is useful on older/external displays | P2 |
+| US-10 | Mac user | use Notch Pocket on a Mac without a notch | the app is useful on older/external displays | P2 |
 | US-11 | Mac user | configure the auto-expire duration | I can match the shelf to my workflow | P2 |
-| US-12 | Mac user | use DropZone across multiple monitors | file shelving works regardless of which screen I'm on | P2 |
+| US-12 | Mac user | use Notch Pocket across multiple monitors | file shelving works regardless of which screen I'm on | P2 |
 
 ---
 
@@ -157,6 +157,8 @@ Moving files between different locations on macOS is friction-heavy. Users must 
                  └──────────┘
 ```
 
+> **Implementation Note**: The actual implementation uses 5 states: `.hidden`, `.listening`, `.expanded`, `.collapsed`, `.shelfExpanded`. The separate `SHELF` state (collapsed with badge, no expanded shelf) is not a distinct state — the badge is shown/hidden via `updateBadge()` independently of the panel state.
+
 ### 3.3 Interaction Details
 
 | Trigger | Action | Animation |
@@ -234,6 +236,8 @@ activationRect = notchRect expanded by:
 - Color: `accentColor` background, white text
 - Size: auto-fit, minimum 20×20pt
 
+> **Implementation Note**: The shelf uses a horizontal scrolling row with 64×72pt thumbnails rather than the 4-column grid specified above. This is a deliberate adaptation for the narrower panel width.
+
 ### 4.4 Thumbnails
 
 | File Type | Thumbnail Source |
@@ -307,6 +311,8 @@ DropZone/
     ├── ThumbnailServiceTests.swift
     └── DragStateTests.swift
 ```
+
+> **Implementation Note**: The actual project uses a flat structure under `DropZoneLib/` rather than the subfolder layout above. The flat structure is adequate for the current codebase size (~14 source files). The naming also differs — e.g., `FileShelfManager` instead of `FileShelfService`, `GlobalDragMonitor` instead of `DragMonitor`. See CLAUDE.md for the actual file-to-responsibility mapping.
 
 ### 5.2 Component Architecture
 
@@ -476,7 +482,7 @@ The key challenge: detecting that a system-wide drag session is in progress befo
 
 | Scenario | Behavior |
 |----------|----------|
-| Two screens, one with notch | DropZone on notch screen by default; option to enable on both |
+| Two screens, one with notch | Notch Pocket on notch screen by default; option to enable on both |
 | Two screens, neither with notch | Floating pill on primary screen; option to enable on both |
 | Screen connected/disconnected | Panel repositions within 500ms; files persist across screen changes |
 | Drag across screens | Activation zone exists on all enabled screens; single shared shelf |
@@ -486,7 +492,7 @@ The key challenge: detecting that a system-wide drag session is in progress befo
 
 | Scenario | Behavior |
 |----------|----------|
-| Menu bar app overlaps notch area | DropZone activation zone has lower priority; user drag intent (moving toward notch specifically) used to disambiguate |
+| Menu bar app overlaps notch area | Notch Pocket activation zone has lower priority; user drag intent (moving toward notch specifically) used to disambiguate |
 | Full-screen app active | Panel shows above full-screen app (`fullScreenAuxiliary` collection behavior) |
 | Screen saver / lock screen | Panel hidden; files preserved; reappears after unlock |
 | App crash / force quit | Temp files remain in cache dir; cleaned up on next launch |
@@ -503,6 +509,8 @@ The key challenge: detecting that a system-wide drag session is in progress befo
 | URLs dragged from browser | Create `.webloc` file |
 | Images dragged from web | Save as image file with inferred extension |
 
+> **Implementation Note (as of Plan 3)**: Text selection → `.txt` clipping, URL → `.webloc` conversion, and large file progress indicators are not yet implemented. These are planned for later milestones (Plans 7, 12).
+
 ---
 
 ## 7. Accessibility
@@ -511,9 +519,9 @@ The key challenge: detecting that a system-wide drag session is in progress befo
 
 | Element | Accessibility Label | Role |
 |---------|-------------------|------|
-| Drop zone (expanded) | "DropZone file shelf. Drop files here for temporary storage." | Group |
+| Drop zone (expanded) | "Notch Pocket file shelf. Drop files here for temporary storage." | Group |
 | Shelf item | "{filename}, {file type}, added {relative time}" | Button |
-| File count badge | "{N} files in DropZone shelf" | Static text |
+| File count badge | "{N} files in Notch Pocket shelf" | Static text |
 | Clear all button | "Clear all files from shelf" | Button |
 | Remove file button | "Remove {filename} from shelf" | Button |
 

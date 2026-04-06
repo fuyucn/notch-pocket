@@ -1,0 +1,60 @@
+# Auto-detect text files and normalize line endings
+* text=auto
+
+# ── Source code ──────────────────────────────────────────────
+*.swift  text diff=swift
+*.h      text diff=objc
+*.m      text diff=objc
+*.c      text diff=cpp
+*.cpp    text diff=cpp
+
+# ── Build & config ──────────────────────────────────────────
+*.plist     text
+*.json      text
+*.yaml      text
+*.yml       text
+*.md        text
+*.txt       text
+*.resolved  text
+Makefile    text
+*.sh        text eol=lf
+
+# ── Xcode project files ────────────────────────────────────
+*.pbxproj   text -diff merge=union
+*.xcscheme  text
+*.xcworkspacedata text
+
+# ── Images (binary) ────────────────────────────────────────
+*.png       binary
+*.jpg       binary
+*.jpeg      binary
+*.gif       binary
+*.ico       binary
+*.icns      binary
+*.svg       text
+*.webp      binary
+*.tiff      binary
+*.tif       binary
+*.bmp       binary
+
+# ── Fonts (binary) ─────────────────────────────────────────
+*.ttf       binary
+*.otf       binary
+*.woff      binary
+*.woff2     binary
+
+# ── Compiled assets & archives (binary) ────────────────────
+*.a         binary
+*.o         binary
+*.dylib     binary
+*.framework binary
+*.xcarchive binary
+*.app       binary
+*.dSYM      binary
+*.ipa       binary
+*.zip       binary
+*.tar.gz    binary
+*.car       binary
+
+# ── Asset catalogs ─────────────────────────────────────────
+*.xcassets  binary
