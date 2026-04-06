@@ -6,6 +6,9 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
     private(set) public var dropZonePanel: DropZonePanel?
     private(set) public var fileShelfManager: FileShelfManager?
     private(set) public var dragMonitor: GlobalDragMonitor?
+    private(set) public var settingsManager: SettingsManager?
+    private(set) public var settingsWindowController: SettingsWindowController?
+    private(set) public var keyboardShortcutManager: KeyboardShortcutManager?
 
     /// Timer to auto-hide the shelf after mouse leaves.
     private var hideShelfTimer: Timer?
@@ -20,8 +23,15 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
     public func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
 
-        // Set up file shelf manager
+        // Set up settings manager (must be first — other components read from it)
+        let settings = SettingsManager()
+        settingsManager = settings
+
+        // Set up file shelf manager with settings-driven limits
         let shelfManager = FileShelfManager()
+        shelfManager.maxItems = settings.maxShelfItems
+        shelfManager.maxTotalBytes = settings.maxStorageBytes
+        shelfManager.expiryInterval = settings.expiryInterval
         try? shelfManager.ensureShelfDirectory()
         shelfManager.startExpiryTimer()
         fileShelfManager = shelfManager
@@ -97,9 +107,46 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
 
         screenDetector = detector
         dropZonePanel = panel
+
+        // Set up settings window controller
+        let settingsWindow = SettingsWindowController(settingsManager: settings)
+        settingsWindowController = settingsWindow
+
+        // Wire settings menu item
+        controller.onShowSettings = { [weak settingsWindow] in
+            settingsWindow?.showSettings()
+        }
+
+        // React to settings changes — push new limits to shelf manager
+        settings.onSettingsChanged = { [weak shelfManager, weak settings] in
+            guard let manager = shelfManager, let s = settings else { return }
+            manager.maxItems = s.maxShelfItems
+            manager.maxTotalBytes = s.maxStorageBytes
+            manager.expiryInterval = s.expiryInterval
+        }
+
+        // Set up global keyboard shortcut (Cmd+Shift+D to toggle shelf)
+        let shortcuts = KeyboardShortcutManager()
+        shortcuts.onToggleShelf = { [weak panel, weak shelfManager] in
+            guard let panel, let manager = shelfManager else { return }
+            if panel.panelState == .shelfExpanded {
+                panel.collapse()
+            } else if !manager.items.isEmpty {
+                panel.fileShelfView.reload()
+                panel.expandShelf()
+            }
+        }
+        shortcuts.register()
+        keyboardShortcutManager = shortcuts
     }
 
     public func applicationWillTerminate(_ notification: Notification) {
+        keyboardShortcutManager?.unregister()
+        keyboardShortcutManager = nil
+
+        settingsWindowController?.closeSettings()
+        settingsWindowController = nil
+
         dragMonitor?.stopMonitoring()
         dragMonitor = nil
 
@@ -117,6 +164,8 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
 
         statusBarController?.teardown()
         statusBarController = nil
+
+        settingsManager = nil
     }
 
     public func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {

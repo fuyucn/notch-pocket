@@ -17,6 +17,8 @@ public final class StatusBarController {
     public var onShowShelf: (@MainActor () -> Void)?
     /// Called when the user selects "Clear Shelf" from the menu.
     public var onClearShelf: (@MainActor () -> Void)?
+    /// Called when the user selects "Settings…" from the menu.
+    public var onShowSettings: (@MainActor () -> Void)?
 
     // MARK: - Init
 
@@ -95,6 +97,10 @@ public final class StatusBarController {
 
         menu.addItem(NSMenuItem.separator())
 
+        let settingsItem = NSMenuItem(title: "Settings\u{2026}", action: #selector(settingsAction(_:)), keyEquivalent: ",")
+        settingsItem.target = self
+        menu.addItem(settingsItem)
+
         let aboutItem = NSMenuItem(title: "About DropZone", action: #selector(aboutAction(_:)), keyEquivalent: "")
         aboutItem.target = self
         menu.addItem(aboutItem)
@@ -114,6 +120,10 @@ public final class StatusBarController {
 
     @objc private func clearShelfAction(_ sender: NSMenuItem) {
         onClearShelf?()
+    }
+
+    @objc private func settingsAction(_ sender: NSMenuItem) {
+        onShowSettings?()
     }
 
     @objc private func aboutAction(_ sender: NSMenuItem) {
