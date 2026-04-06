@@ -206,14 +206,16 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
     @MainActor
     private func wireStatusBarController(
         _ controller: StatusBarController,
-        panel: DropZonePanel,
         shelfManager: FileShelfManager
     ) {
-        controller.onShowShelf = { [weak panel, weak shelfManager] in
-            guard let panel, let manager = shelfManager else { return }
+        controller.onShowShelf = { [weak self, weak shelfManager] in
+            guard let self, let manager = shelfManager else { return }
             if !manager.items.isEmpty {
-                panel.fileShelfView.reload()
-                panel.expandShelf()
+                // Show shelf on primary panel
+                if let primaryPanel = self.panels.values.first(where: { $0.geometry.hasNotch }) ?? self.panels.values.first {
+                    primaryPanel.fileShelfView.reload()
+                    primaryPanel.expandShelf()
+                }
             }
         }
 
@@ -226,22 +228,104 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
 
         // Keep status bar in sync with shelf changes
         let previousCallback = shelfManager.onItemsChanged
-        shelfManager.onItemsChanged = { [weak controller, weak panel, weak shelfManager] in
+        shelfManager.onItemsChanged = { [weak controller, weak self, weak shelfManager] in
             // Call the previously wired callback first
             previousCallback?()
             guard let manager = shelfManager else { return }
             controller?.updateFileCount(manager.items.count)
-            panel?.fileShelfView.reload()
-            panel?.updateBadge(count: manager.items.count)
+            if let self {
+                for panel in self.panels.values {
+                    panel.fileShelfView.reload()
+                    panel.updateBadge(count: manager.items.count)
+                }
+            }
+        }
+    }
+
+    // MARK: - Panel factory
+
+    /// Create and wire a DropZonePanel for a specific screen.
+    @MainActor
+    private func createPanel(
+        displayID: CGDirectDisplayID,
+        geometry: NotchGeometry,
+        shelfManager: FileShelfManager
+    ) -> DropZonePanel {
+        let panel = DropZonePanel(geometry: geometry)
+
+        // Wire drag destination to shelf manager
+        panel.dragDestinationView.fileShelfManager = shelfManager
+        panel.dragDestinationView.onFilesDropped = { [weak panel, weak shelfManager] count in
+            panel?.playDropConfirmation {
+                guard let panel, let manager = shelfManager else { return }
+                panel.fileShelfView.animateAddItems(Array(manager.items.suffix(count)))
+                panel.expandShelf()
+            }
+        }
+
+        // Wire shelf view
+        panel.fileShelfView.fileShelfManager = shelfManager
+        panel.fileShelfView.onShelfEmpty = { [weak panel] in
+            panel?.collapse()
+        }
+        panel.fileShelfView.onItemCountChanged = { [weak panel] count in
+            if panel?.panelState == .hidden || panel?.panelState == .listening {
+                panel?.updateBadge(count: count)
+            }
+        }
+
+        // Wire panel hover for shelf reveal
+        panel.onMouseEntered = { [weak self, weak panel, weak shelfManager] in
+            guard let panel, let manager = shelfManager else { return }
+            self?.cancelHideShelfTimer(for: displayID)
+            if !manager.items.isEmpty && panel.panelState != .shelfExpanded {
+                panel.fileShelfView.reload()
+                panel.expandShelf()
+            }
+        }
+        panel.onMouseExited = { [weak self, weak panel] in
+            guard let panel else { return }
+            if panel.panelState == .shelfExpanded {
+                self?.scheduleHideShelf(for: displayID, panel: panel)
+            }
+        }
+        panel.setupHoverTracking()
+
+        return panel
+    }
+
+    // MARK: - Panel reconciliation
+
+    /// Add/remove panels when screens change.
+    @MainActor
+    private func reconcilePanels(
+        newGeometries: [CGDirectDisplayID: NotchGeometry],
+        shelfManager: FileShelfManager
+    ) {
+        // Remove panels for disconnected screens
+        for displayID in panels.keys where newGeometries[displayID] == nil {
+            panels[displayID]?.hide()
+            panels.removeValue(forKey: displayID)
+            cancelHideShelfTimer(for: displayID)
+        }
+
+        // Add panels for new screens, update geometry for existing
+        for (displayID, geo) in newGeometries {
+            if let existing = panels[displayID] {
+                existing.geometry = geo
+            } else {
+                let panel = createPanel(displayID: displayID, geometry: geo, shelfManager: shelfManager)
+                panels[displayID] = panel
+            }
         }
     }
 
     // MARK: - Auto-hide shelf timer
 
     @MainActor
-    private func scheduleHideShelf(panel: DropZonePanel) {
-        cancelHideShelfTimer()
-        hideShelfTimer = Timer.scheduledTimer(
+    private func scheduleHideShelf(for displayID: CGDirectDisplayID, panel: DropZonePanel) {
+        cancelHideShelfTimer(for: displayID)
+        hideShelfTimers[displayID] = Timer.scheduledTimer(
             withTimeInterval: Self.hideShelfDelay,
             repeats: false
         ) { [weak panel] _ in
@@ -254,8 +338,8 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     @MainActor
-    private func cancelHideShelfTimer() {
-        hideShelfTimer?.invalidate()
-        hideShelfTimer = nil
+    private func cancelHideShelfTimer(for displayID: CGDirectDisplayID) {
+        hideShelfTimers[displayID]?.invalidate()
+        hideShelfTimers.removeValue(forKey: displayID)
     }
 }

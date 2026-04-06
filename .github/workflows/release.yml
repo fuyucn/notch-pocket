@@ -1,4 +1,5 @@
 # Build and publish a GitHub Release when you push a version tag: v1.2.3
+# The tag must point to a commit on main (see "Require tag on main" step).
 # Asset: one zip with universal (arm64+x86_64) Notch Pocket.app, ad-hoc signed.
 
 name: Release
@@ -17,6 +18,17 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Require tag on main
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          if ! git merge-base --is-ancestor "${GITHUB_SHA}" "origin/main"; then
+            echo "::error::Release tags must point to a commit on main (the tagged commit must be an ancestor of origin/main). Merge to main first, then tag and push." >&2
+            exit 1
+          fi
 
       - name: Parse version from tag
         id: ver

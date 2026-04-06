@@ -113,6 +113,74 @@ struct ScreenDetectorTests {
         }
     }
 
+    // MARK: - Multi-screen detection (Bug 1)
+
+    @Test("detectAllGeometries returns one entry per connected screen")
+    func detectAllGeometriesCount() {
+        let geometries = ScreenDetector.detectAllGeometries()
+        #expect(geometries.count == NSScreen.screens.count)
+    }
+
+    @Test("detectAllGeometries keys are valid display IDs")
+    func detectAllGeometriesKeys() {
+        let geometries = ScreenDetector.detectAllGeometries()
+        for (displayID, _) in geometries {
+            #expect(displayID != 0, "Display ID should not be zero")
+        }
+    }
+
+    @Test("detectAllGeometries values have valid geometry for every screen")
+    func detectAllGeometriesValues() {
+        let geometries = ScreenDetector.detectAllGeometries()
+        for (_, geo) in geometries {
+            #expect(geo.screenFrame.width > 0)
+            #expect(geo.screenFrame.height > 0)
+            #expect(geo.activationZone.width > 0)
+            #expect(geo.activationZone.height > 0)
+        }
+    }
+
+    @Test("allGeometries property matches detectAllGeometries on init")
+    func allGeometriesPropertyMatchesStatic() {
+        let detector = ScreenDetector()
+        let staticResult = ScreenDetector.detectAllGeometries()
+        #expect(detector.allGeometries.count == staticResult.count)
+        for (displayID, geo) in detector.allGeometries {
+            #expect(staticResult[displayID] != nil)
+            #expect(staticResult[displayID]?.screenFrame == geo.screenFrame)
+        }
+    }
+
+    @Test("onAllScreensChanged callback fires on refresh")
+    func onAllScreensChangedCallback() {
+        let detector = ScreenDetector()
+        var callbackFired = false
+        var receivedGeometries: [CGDirectDisplayID: NotchGeometry]?
+
+        detector.onAllScreensChanged = { geometries in
+            callbackFired = true
+            receivedGeometries = geometries
+        }
+
+        detector.refresh()
+        #expect(callbackFired)
+        #expect(receivedGeometries != nil)
+        #expect(receivedGeometries?.count == NSScreen.screens.count)
+    }
+
+    @Test("allGeometries updates after refresh")
+    func allGeometriesUpdatesOnRefresh() {
+        let detector = ScreenDetector()
+        let beforeCount = detector.allGeometries.count
+        detector.refresh()
+        // Count should remain consistent (no screens changed)
+        #expect(detector.allGeometries.count == beforeCount)
+        // All geometries should still be valid
+        for (_, geo) in detector.allGeometries {
+            #expect(geo.activationZone.width > 0)
+        }
+    }
+
     @Test("Detector without callback does not crash on refresh")
     func refreshWithoutCallback() {
         let detector = ScreenDetector()

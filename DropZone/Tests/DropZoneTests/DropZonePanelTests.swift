@@ -235,6 +235,94 @@ struct DropZonePanelTests {
         #expect(frameBefore.origin != frameAfter.origin)
     }
 
+    // MARK: - External display positioning (Bug 1)
+
+    @Test("Panel on external display (offset screen) positions correctly")
+    func panelOnExternalDisplay() {
+        let externalScreenFrame = NSRect(x: 1600, y: 0, width: 2560, height: 1440)
+        let geometry = NotchGeometry(
+            notchRect: nil,
+            activationZone: NSRect(x: 2750, y: 1348, width: 260, height: 102),
+            screenFrame: externalScreenFrame,
+            hasNotch: false
+        )
+
+        let panel = DropZonePanel(geometry: geometry)
+        panel.expand()
+
+        // Panel should be positioned on the external display (x >= 1600)
+        #expect(panel.frame.origin.x >= 1600, "Panel must be on external display")
+        // Panel should be near top of external screen
+        #expect(panel.frame.maxY <= 1440 + 1, "Panel must not exceed external screen top")
+    }
+
+    @Test("Panel on external display with notch positions at notch")
+    func panelOnExternalDisplayWithNotch() {
+        // Simulates a second MacBook display (e.g., Sidecar or external notched display)
+        let externalScreenFrame = NSRect(x: 1600, y: 0, width: 1600, height: 1422)
+        let notchRect = NSRect(x: 2300, y: 1390, width: 200, height: 32)
+        let geometry = NotchGeometry(
+            notchRect: notchRect,
+            activationZone: NSRect(x: 2280, y: 1350, width: 240, height: 72),
+            screenFrame: externalScreenFrame,
+            hasNotch: true
+        )
+
+        let panel = DropZonePanel(geometry: geometry)
+        panel.expand()
+
+        // Panel should be on the external display
+        #expect(panel.frame.origin.x >= 1600)
+        // Panel should be centered around notch midX (2400)
+        let panelMidX = panel.frame.midX
+        #expect(abs(panelMidX - 2400) < 1)
+    }
+
+    @Test("Geometry update to external display repositions panel")
+    func geometryUpdateToExternalDisplay() {
+        // Start on built-in display
+        let panel = DropZonePanel(geometry: makeTestGeometry(hasNotch: true))
+        panel.expand()
+        let builtInOrigin = panel.frame.origin
+
+        // Switch to external display
+        let externalGeometry = NotchGeometry(
+            notchRect: nil,
+            activationZone: NSRect(x: 2750, y: 1348, width: 260, height: 102),
+            screenFrame: NSRect(x: 1600, y: 0, width: 2560, height: 1440),
+            hasNotch: false
+        )
+        panel.geometry = externalGeometry
+        let externalOrigin = panel.frame.origin
+
+        // Panel should have moved to external display coordinates
+        #expect(externalOrigin.x > builtInOrigin.x)
+        #expect(externalOrigin.x >= 1600)
+    }
+
+    @Test("Multiple panels can coexist for different screens")
+    func multiplePanelsCoexist() {
+        let builtInGeometry = makeTestGeometry(hasNotch: true)
+        let externalGeometry = NotchGeometry(
+            notchRect: nil,
+            activationZone: NSRect(x: 2750, y: 1348, width: 260, height: 102),
+            screenFrame: NSRect(x: 1600, y: 0, width: 2560, height: 1440),
+            hasNotch: false
+        )
+
+        let panel1 = DropZonePanel(geometry: builtInGeometry)
+        let panel2 = DropZonePanel(geometry: externalGeometry)
+
+        panel1.expand()
+        panel2.expand()
+
+        // Panels should be at different positions
+        #expect(panel1.frame.origin.x != panel2.frame.origin.x)
+        // Both should be in expanded state
+        #expect(panel1.panelState == .expanded)
+        #expect(panel2.panelState == .expanded)
+    }
+
     @Test("Geometry update repositions shelfExpanded panel")
     func geometryUpdateRepositionsShelf() {
         let panel = DropZonePanel(geometry: makeTestGeometry(hasNotch: true))

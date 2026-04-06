@@ -120,8 +120,8 @@ struct GlobalDragMonitorTests {
         nonisolated(unsafe) var began = false
         nonisolated(unsafe) var ended = false
 
-        monitor.onDragEnteredZone = { entered = true }
-        monitor.onDragExitedZone = { exited = true }
+        monitor.onDragEnteredZone = { _ in entered = true }
+        monitor.onDragExitedZone = { _ in exited = true }
         monitor.onDragBegan = { began = true }
         monitor.onDragEnded = { ended = true }
 

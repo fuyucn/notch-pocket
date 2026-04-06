@@ -346,8 +346,8 @@ struct FileShelfManagerTests {
 
     // MARK: - Additional edge cases
 
-    @Test("Adding same file twice creates two distinct shelf items")
-    func addSameFileTwice() throws {
+    @Test("Adding same file URL twice deduplicates to one shelf item")
+    func addSameFileTwiceDeduplicates() throws {
         let sourceDir = try makeTempDirectory()
         let (manager, shelfDir) = try makeManager()
         let fileURL = try makeTestFile(in: sourceDir, name: "dup.txt", content: "data")
@@ -355,11 +355,59 @@ struct FileShelfManagerTests {
         let first = manager.addFiles(from: [fileURL])
         let second = manager.addFiles(from: [fileURL])
         #expect(first.count == 1)
-        #expect(second.count == 1)
+        #expect(second.isEmpty, "Duplicate URL should be silently skipped")
+        #expect(manager.items.count == 1, "Only one shelf item should exist for same URL")
+
+        try? FileManager.default.removeItem(at: sourceDir)
+        try? FileManager.default.removeItem(at: shelfDir)
+    }
+
+    @Test("Adding same URL twice in single batch deduplicates")
+    func addSameURLInSingleBatch() throws {
+        let sourceDir = try makeTempDirectory()
+        let (manager, shelfDir) = try makeManager()
+        let fileURL = try makeTestFile(in: sourceDir, name: "dup.txt", content: "data")
+
+        let added = manager.addFiles(from: [fileURL, fileURL])
+        #expect(added.count == 1, "Same URL passed twice in one batch should only add once")
+        #expect(manager.items.count == 1)
+
+        try? FileManager.default.removeItem(at: sourceDir)
+        try? FileManager.default.removeItem(at: shelfDir)
+    }
+
+    @Test("Adding different files with same name from different directories adds both")
+    func differentFilesWithSameNameAddBoth() throws {
+        let sourceDir1 = try makeTempDirectory()
+        let sourceDir2 = try makeTempDirectory()
+        let (manager, shelfDir) = try makeManager()
+        let file1 = try makeTestFile(in: sourceDir1, name: "report.txt", content: "version 1")
+        let file2 = try makeTestFile(in: sourceDir2, name: "report.txt", content: "version 2")
+
+        let added = manager.addFiles(from: [file1, file2])
+        #expect(added.count == 2, "Different URLs with same filename should both be added")
         #expect(manager.items.count == 2)
-        // They should have different IDs and different shelf paths
-        #expect(first[0].id != second[0].id)
-        #expect(first[0].shelfURL != second[0].shelfURL)
+
+        try? FileManager.default.removeItem(at: sourceDir1)
+        try? FileManager.default.removeItem(at: sourceDir2)
+        try? FileManager.default.removeItem(at: shelfDir)
+    }
+
+    @Test("Re-adding file after removal is allowed")
+    func reAddAfterRemoval() throws {
+        let sourceDir = try makeTempDirectory()
+        let (manager, shelfDir) = try makeManager()
+        let fileURL = try makeTestFile(in: sourceDir, name: "reuse.txt", content: "data")
+
+        let first = manager.addFiles(from: [fileURL])
+        #expect(manager.items.count == 1)
+
+        manager.removeItem(first[0].id)
+        #expect(manager.items.isEmpty)
+
+        let second = manager.addFiles(from: [fileURL])
+        #expect(second.count == 1, "File should be addable again after removal")
+        #expect(manager.items.count == 1)
 
         try? FileManager.default.removeItem(at: sourceDir)
         try? FileManager.default.removeItem(at: shelfDir)
