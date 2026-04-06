@@ -86,7 +86,8 @@ public final class DropZonePanel: NSPanel {
 
     private func configurePanelBehavior() {
         isFloatingPanel = true
-        level = .floating
+        // Use screenSaver level to stay above all other windows including fullscreen apps
+        level = .init(rawValue: Int(CGShieldingWindowLevel()) + 1)
         collectionBehavior = [.fullScreenAuxiliary, .stationary, .canJoinAllSpaces]
 
         isOpaque = false
@@ -272,6 +273,41 @@ public final class DropZonePanel: NSPanel {
     public func hideBadge() {
         countBadgeLayer?.removeFromSuperlayer()
         countBadgeLayer = nil
+    }
+
+    // MARK: - Mouse hover tracking
+
+    private var trackingArea: NSTrackingArea?
+
+    /// Set up a tracking area over the activation zone to detect mouse hover.
+    /// When the user hovers over the notch area and files are on the shelf,
+    /// the panel expands to show the shelf.
+    public func setupHoverTracking() {
+        guard let contentView else { return }
+        if let existing = trackingArea {
+            contentView.removeTrackingArea(existing)
+        }
+        let area = NSTrackingArea(
+            rect: contentView.bounds,
+            options: [.mouseEnteredAndExited, .activeAlways, .inVisibleRect],
+            owner: self,
+            userInfo: nil
+        )
+        contentView.addTrackingArea(area)
+        trackingArea = area
+    }
+
+    /// Callback when mouse hovers over the panel (for shelf reveal).
+    public var onMouseEntered: (@MainActor () -> Void)?
+    /// Callback when mouse leaves the panel.
+    public var onMouseExited: (@MainActor () -> Void)?
+
+    public override func mouseEntered(with event: NSEvent) {
+        onMouseEntered?()
+    }
+
+    public override func mouseExited(with event: NSEvent) {
+        onMouseExited?()
     }
 
     // MARK: - Repositioning

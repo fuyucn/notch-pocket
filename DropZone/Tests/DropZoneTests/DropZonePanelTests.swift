@@ -51,11 +51,12 @@ struct DropZonePanelTests {
         #expect(panel.styleMask.contains(.fullSizeContentView))
     }
 
-    @Test("Panel is floating at floating level")
+    @Test("Panel is floating above all other windows")
     func panelIsFloating() {
         let panel = DropZonePanel(geometry: makeTestGeometry(hasNotch: true))
         #expect(panel.isFloatingPanel)
-        #expect(panel.level == .floating)
+        // Panel should be above the shielding window level
+        #expect(panel.level.rawValue > Int(CGShieldingWindowLevel()))
     }
 
     @Test("Panel is transparent with clear background")
