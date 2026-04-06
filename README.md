@@ -1,6 +1,8 @@
-# DropZone
+# Notch Pocket
 
-A macOS app that transforms your MacBook's notch into a temporary file shelf, enabling frictionless cross-window, cross-space file transfers via drag-and-drop.
+> **Note:** This is an AI-generated side project — built collaboratively with AI assistance.
+
+A macOS app that transforms your MacBook's notch into a temporary file shelf — a pocket right in the notch — enabling frictionless cross-window, cross-space file transfers via drag-and-drop.
 
 ![macOS 14+](https://img.shields.io/badge/macOS-14%2B-blue)
 ![Swift 6.0](https://img.shields.io/badge/Swift-6.0-orange)
@@ -54,7 +56,7 @@ Open `DropZone/Package.swift` in Xcode, select the `DropZone` scheme, and run.
 
 ## Usage
 
-1. **Launch** — Run DropZone. A menu bar icon appears in the status bar.
+1. **Launch** — Run Notch Pocket. A menu bar icon appears in the status bar.
 2. **Shelve files** — Start dragging any file. The notch area activates automatically. Drop the file onto it.
 3. **Switch context** — Navigate to your target app, folder, or Space. Your hands are free.
 4. **Retrieve files** — Hover over the notch to expand the shelf. Drag your file out to the destination.
@@ -74,7 +76,7 @@ The status bar icon shows the current shelved file count. Click it to access:
 - **Show Shelf** — Expand the shelf panel
 - **Settings** — Open the preferences window
 - **Clear All** — Remove all shelved files
-- **Quit** — Exit DropZone
+- **Quit** — Exit Notch Pocket
 
 ## Configuration
 

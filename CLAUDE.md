@@ -1,4 +1,6 @@
-# DropZone — Project Guidelines
+> **Note:** This is an AI-generated side project — built collaboratively with AI assistance.
+
+# Notch Pocket — Project Guidelines
 
 ## Development Workflow
 

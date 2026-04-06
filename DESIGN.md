@@ -1,4 +1,4 @@
-# DropZone — Product Design Document
+# Notch Pocket — Product Design Document
 
 > A macOS app that transforms the notch into a temporary file shelf, enabling frictionless cross-context file transfers via drag-and-drop.
 
@@ -33,7 +33,7 @@ Moving files between different locations on macOS is friction-heavy. Users must 
 
 ### Solution
 
-**DropZone** turns the MacBook notch area into a "Dynamic Island" — a persistent, always-accessible drop zone. Users drag files onto the notch, release them, switch to their destination, then drag the files back out. No button-holding across windows. No Desktop clutter.
+**Notch Pocket** turns the MacBook notch area into a "Dynamic Island" — a persistent, always-accessible drop zone. Users drag files onto the notch, release them, switch to their destination, then drag the files back out. No button-holding across windows. No Desktop clutter.
 
 ### Core Principles
 
@@ -73,9 +73,9 @@ Moving files between different locations on macOS is friction-heavy. Users must 
 | US-7 | Mac user | hover over the notch to see shelved files | I can check what's stored without dragging | P1 |
 | US-8 | Mac user | remove individual files from the shelf | I can clean up files I no longer need | P1 |
 | US-9 | Mac user | clear all files from the shelf at once | I can start fresh quickly | P2 |
-| US-10 | Mac user | use DropZone on a Mac without a notch | the app is useful on older/external displays | P2 |
+| US-10 | Mac user | use Notch Pocket on a Mac without a notch | the app is useful on older/external displays | P2 |
 | US-11 | Mac user | configure the auto-expire duration | I can match the shelf to my workflow | P2 |
-| US-12 | Mac user | use DropZone across multiple monitors | file shelving works regardless of which screen I'm on | P2 |
+| US-12 | Mac user | use Notch Pocket across multiple monitors | file shelving works regardless of which screen I'm on | P2 |
 
 ---
 
@@ -482,7 +482,7 @@ The key challenge: detecting that a system-wide drag session is in progress befo
 
 | Scenario | Behavior |
 |----------|----------|
-| Two screens, one with notch | DropZone on notch screen by default; option to enable on both |
+| Two screens, one with notch | Notch Pocket on notch screen by default; option to enable on both |
 | Two screens, neither with notch | Floating pill on primary screen; option to enable on both |
 | Screen connected/disconnected | Panel repositions within 500ms; files persist across screen changes |
 | Drag across screens | Activation zone exists on all enabled screens; single shared shelf |
@@ -492,7 +492,7 @@ The key challenge: detecting that a system-wide drag session is in progress befo
 
 | Scenario | Behavior |
 |----------|----------|
-| Menu bar app overlaps notch area | DropZone activation zone has lower priority; user drag intent (moving toward notch specifically) used to disambiguate |
+| Menu bar app overlaps notch area | Notch Pocket activation zone has lower priority; user drag intent (moving toward notch specifically) used to disambiguate |
 | Full-screen app active | Panel shows above full-screen app (`fullScreenAuxiliary` collection behavior) |
 | Screen saver / lock screen | Panel hidden; files preserved; reappears after unlock |
 | App crash / force quit | Temp files remain in cache dir; cleaned up on next launch |
@@ -519,9 +519,9 @@ The key challenge: detecting that a system-wide drag session is in progress befo
 
 | Element | Accessibility Label | Role |
 |---------|-------------------|------|
-| Drop zone (expanded) | "DropZone file shelf. Drop files here for temporary storage." | Group |
+| Drop zone (expanded) | "Notch Pocket file shelf. Drop files here for temporary storage." | Group |
 | Shelf item | "{filename}, {file type}, added {relative time}" | Button |
-| File count badge | "{N} files in DropZone shelf" | Static text |
+| File count badge | "{N} files in Notch Pocket shelf" | Static text |
 | Clear all button | "Clear all files from shelf" | Button |
 | Remove file button | "Remove {filename} from shelf" | Button |
 

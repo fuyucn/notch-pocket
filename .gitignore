@@ -5,15 +5,30 @@ DerivedData/
 *.xcworkspace/xcuserdata/
 *.xcodeproj/project.xcworkspace/xcshareddata/IDEWorkspaceChecks.plist
 xcuserdata/
+*.xccheckout
+*.xcscmblueprint
 
 # Swift Package Manager
 .build/
+.swiftpm/
 Packages/
 Package.resolved
 
+# Debug symbols
+*.dSYM/
+*.dSYM.zip
+
 # macOS
 .DS_Store
+.AppleDouble
+.LSOverride
+._*
+.Spotlight-V100
+.Trashes
+
+# Editor temp files
 *.swp
+*.swo
 *~
 
 # IDE
@@ -21,15 +36,27 @@ Package.resolved
 *.code-workspace
 .vscode/
 
-# Archives
-*.ipa
+# Archives & builds
+*.app
+*.ipa                    # iOS-specific
 *.dSYM.zip
-*.dSYM
 
-# Signing
-*.mobileprovision
+# Signing (iOS-specific)
+*.mobileprovision        # iOS provisioning profiles
 *.provisionprofile
+
+# Code coverage
+*.gcno
+*.gcda
+codecov/
 
 # Env
 .env
 .env.local
+
+# Playground
+*.playground/timeline.xctimeline
+*.playground/playground.xcworkspace
+
+# Crash logs
+*.crash
