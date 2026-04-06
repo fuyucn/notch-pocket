@@ -4,7 +4,7 @@
 
 **Version**: 1.0  
 **Last Updated**: 2026-04-06  
-**Status**: Draft  
+**Status**: In Development (Plans 1–3 implemented)  
 **Minimum macOS**: 14 Sonoma
 
 ---
@@ -157,6 +157,8 @@ Moving files between different locations on macOS is friction-heavy. Users must 
                  └──────────┘
 ```
 
+> **Implementation Note**: The actual implementation uses 5 states: `.hidden`, `.listening`, `.expanded`, `.collapsed`, `.shelfExpanded`. The separate `SHELF` state (collapsed with badge, no expanded shelf) is not a distinct state — the badge is shown/hidden via `updateBadge()` independently of the panel state.
+
 ### 3.3 Interaction Details
 
 | Trigger | Action | Animation |
@@ -234,6 +236,8 @@ activationRect = notchRect expanded by:
 - Color: `accentColor` background, white text
 - Size: auto-fit, minimum 20×20pt
 
+> **Implementation Note**: The shelf uses a horizontal scrolling row with 64×72pt thumbnails rather than the 4-column grid specified above. This is a deliberate adaptation for the narrower panel width.
+
 ### 4.4 Thumbnails
 
 | File Type | Thumbnail Source |
@@ -307,6 +311,8 @@ DropZone/
     ├── ThumbnailServiceTests.swift
     └── DragStateTests.swift
 ```
+
+> **Implementation Note**: The actual project uses a flat structure under `DropZoneLib/` rather than the subfolder layout above. The flat structure is adequate for the current codebase size (~14 source files). The naming also differs — e.g., `FileShelfManager` instead of `FileShelfService`, `GlobalDragMonitor` instead of `DragMonitor`. See CLAUDE.md for the actual file-to-responsibility mapping.
 
 ### 5.2 Component Architecture
 
@@ -502,6 +508,8 @@ The key challenge: detecting that a system-wide drag session is in progress befo
 | Text selections (no file) | Create `.txt` clipping file with content |
 | URLs dragged from browser | Create `.webloc` file |
 | Images dragged from web | Save as image file with inferred extension |
+
+> **Implementation Note (as of Plan 3)**: Text selection → `.txt` clipping, URL → `.webloc` conversion, and large file progress indicators are not yet implemented. These are planned for later milestones (Plans 7, 12).
 
 ---
 
