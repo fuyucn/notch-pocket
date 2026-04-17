@@ -123,7 +123,7 @@ private struct ShelfGridCell: View {
             withAnimation(.easeInOut(duration: 0.12)) { isHovering = hovering }
         }
         .onDrag {
-            NSItemProvider(contentsOf: item.shelfURL) ?? NSItemProvider(object: item.shelfURL as NSURL)
+            makeFileItemProvider(for: item.shelfURL)
         }
         .contextMenu {
             Button("Open") { onOpen() }
@@ -131,8 +131,6 @@ private struct ShelfGridCell: View {
         }
     }
 
-    /// Generic icon by file extension — keep it simple; QuickLook/FileThumbnailView
-    /// integration via NSViewRepresentable is a polish follow-up.
     private var iconName: String {
         guard let ext = item.fileExtension?.lowercased() else { return "doc" }
         switch ext {

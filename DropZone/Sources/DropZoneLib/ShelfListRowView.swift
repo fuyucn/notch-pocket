@@ -78,7 +78,7 @@ public struct ShelfListRowView: View {
             withAnimation(.easeInOut(duration: 0.12)) { isHovering = hovering }
         }
         .onDrag {
-            NSItemProvider(contentsOf: item.shelfURL) ?? NSItemProvider(object: item.shelfURL as NSURL)
+            makeFileItemProvider(for: item.shelfURL)
         }
         .contextMenu {
             Button("Open") { onOpen() }

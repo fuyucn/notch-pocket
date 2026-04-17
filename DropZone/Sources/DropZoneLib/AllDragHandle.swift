@@ -68,11 +68,12 @@ private final class DragSourceNSView: NSView, NSDraggingSource {
             return
         }
 
+        // Use NSURL directly as pasteboard writer — NSURL already registers
+        // itself as a file-url pasteboard item with the correct type and
+        // name, which keeps Finder drops named after the original file
+        // (including .app bundles and plain-text like .md).
         let items = urls.map { url -> NSDraggingItem in
-            let provider = NSItemProvider(contentsOf: url)
-                ?? NSItemProvider(object: url as NSURL)
-            let item = NSDraggingItem(pasteboardWriter: provider as? NSPasteboardWriting ?? (url as NSURL))
-            // Place each drag image slightly offset so users see a stack.
+            let item = NSDraggingItem(pasteboardWriter: url as NSURL)
             item.draggingFrame = NSRect(x: 0, y: 0, width: 32, height: 32)
             return item
         }
