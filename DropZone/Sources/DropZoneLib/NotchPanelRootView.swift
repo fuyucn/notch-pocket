@@ -62,12 +62,15 @@ public struct NotchPanelRootView: View {
         case .closed:
             Color.clear
         case .popping:
-            PreActivationBarView(
-                primaryFileName: viewModel.primaryFileName,
-                extraCount: viewModel.extraCount,
-                shelfCount: viewModel.shelfCount,
-                notchInset: (viewModel.geometry.notchRect?.height ?? 32) + 8
-            )
+            VStack(spacing: 0) {
+                notchTopBar
+                PreActivationBarView(
+                    primaryFileName: viewModel.primaryFileName,
+                    extraCount: viewModel.extraCount,
+                    shelfCount: viewModel.shelfCount,
+                    notchInset: 8
+                )
+            }
             .frame(
                 width: viewModel.geometry.preActivatedPanelSize.width,
                 height: viewModel.geometry.preActivatedPanelSize.height
@@ -78,14 +81,46 @@ public struct NotchPanelRootView: View {
         }
     }
 
+    /// Horizontal strip at the very top of the panel that sits alongside the
+    /// physical notch. Shows a logo on the left and file-count badge on the right.
+    @ViewBuilder
+    private var notchTopBar: some View {
+        let notchHeight = viewModel.geometry.notchRect?.height ?? 32
+        let notchWidth = viewModel.geometry.notchRect?.width ?? 200
+        HStack(spacing: 0) {
+            Image(systemName: "tray.fill")
+                .font(.system(size: 13, weight: .medium))
+                .foregroundStyle(.white.opacity(0.9))
+                .frame(maxWidth: .infinity, alignment: .trailing)
+                .padding(.trailing, 10)
+            // Reserve exact notch width so the left/right content ends up on
+            // the notch's shoulders, not under the physical cutout.
+            Color.clear.frame(width: notchWidth)
+            if viewModel.shelfCount > 0 {
+                Text("\(viewModel.shelfCount)")
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 7)
+                    .padding(.vertical, 2)
+                    .background(Capsule().fill(Color.white.opacity(0.18)))
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.leading, 10)
+            } else {
+                Color.clear
+                    .frame(maxWidth: .infinity)
+            }
+        }
+        .frame(height: notchHeight)
+    }
+
     @ViewBuilder
     private var openedContent: some View {
         if let shelfManager = viewModel.shelfManager {
             let mode = viewModel.settingsManager?.shelfViewMode ?? .list
             let size = viewModel.geometry.openedPanelSize
-            let notchHeight = viewModel.geometry.notchRect?.height ?? 32
             VStack(spacing: 0) {
-                Spacer().frame(height: notchHeight + 8) // content starts just below notch cutout
+                notchTopBar
+                Spacer().frame(height: 8)
                 ShelfHeaderView(
                     itemCount: shelfManager.items.count,
                     viewMode: mode,
