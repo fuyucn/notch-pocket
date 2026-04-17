@@ -53,9 +53,12 @@ public final class FileDragSourceNSView: NSView, NSDraggingSource {
         _ session: NSDraggingSession,
         sourceOperationMaskFor context: NSDraggingContext
     ) -> NSDragOperation {
-        // Let the receiving app pick (copy/move). macOS maps Option → copy,
-        // default → move for file URLs. We don't override this.
-        return [.copy, .move, .generic]
+        // Always hand over as copy. Allowing `.move` would tell Finder to
+        // relocate the source, which fails on our Caches-backed shelf
+        // directory (error -8058). Our own `removeOnDragOut` setting handles
+        // shelf removal after a successful drop — that's app-side, not
+        // filesystem-level.
+        return [.copy]
     }
 
     nonisolated public func draggingSession(
