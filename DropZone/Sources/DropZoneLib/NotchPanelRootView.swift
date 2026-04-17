@@ -67,6 +67,11 @@ public struct NotchPanelRootView: View {
                 extraCount: viewModel.extraCount,
                 shelfCount: viewModel.shelfCount
             )
+            .frame(
+                width: viewModel.geometry.preActivatedPanelSize.width,
+                height: viewModel.geometry.preActivatedPanelSize.height
+            )
+            .clipShape(NotchShape(topCornerRadius: targetTopRadius, bottomCornerRadius: targetBottomRadius))
         case .opened:
             openedContent
         }
@@ -76,6 +81,7 @@ public struct NotchPanelRootView: View {
     private var openedContent: some View {
         if let shelfManager = viewModel.shelfManager {
             let mode = viewModel.settingsManager?.shelfViewMode ?? .list
+            let size = viewModel.geometry.openedPanelSize
             VStack(spacing: 0) {
                 Spacer().frame(height: 36) // below notch cutout
                 ShelfHeaderView(
@@ -108,6 +114,8 @@ public struct NotchPanelRootView: View {
                 .padding(.horizontal, 8)
                 .padding(.bottom, 8)
             }
+            .frame(width: size.width, height: size.height)
+            .clipShape(NotchShape(topCornerRadius: targetTopRadius, bottomCornerRadius: targetBottomRadius))
             .id(viewModel.shelfRefreshToken) // cache-bust the whole sub-tree
         } else {
             Text("Shelf unavailable")
