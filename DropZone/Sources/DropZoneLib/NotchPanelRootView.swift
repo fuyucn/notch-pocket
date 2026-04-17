@@ -169,9 +169,9 @@ public struct NotchPanelRootView: View {
             VStack(spacing: 0) {
                 notchTopBar
                 contentBody(shelfManager: shelfManager, mode: mode)
-                    .padding(.horizontal, 14)
-                    .padding(.top, 8)
-                    .padding(.bottom, 12)
+                    .padding(.horizontal, 20)
+                    .padding(.top, 6)
+                    .padding(.bottom, 14)
             }
             .frame(width: size.width, height: size.height)
             .clipShape(NotchShape(topCornerRadius: targetTopRadius, bottomCornerRadius: targetBottomRadius))
