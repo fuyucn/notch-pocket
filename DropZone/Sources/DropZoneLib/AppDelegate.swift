@@ -187,9 +187,27 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
             }
         }
 
+        // When a drag enters the outer pre-activation ring, show the narrow bar on that screen.
+        monitor.onPreActivationEntered = { [weak panel, weak shelfManager] _, fileNames in
+            guard let panel, let manager = shelfManager else { return }
+            if panel.panelState == .listening || panel.panelState == .preActivated {
+                panel.enterPreActivation(
+                    primaryFileName: fileNames.first,
+                    extraCount: max(0, fileNames.count - 1),
+                    shelfCount: manager.items.count
+                )
+            }
+        }
+
+        monitor.onPreActivationExited = { [weak panel] _ in
+            if panel?.panelState == .preActivated {
+                panel?.exitPreActivation()
+            }
+        }
+
         // When the drag cursor enters the activation zone, expand the panel
         monitor.onDragEnteredZone = { [weak panel] _ in
-            if panel?.panelState == .listening {
+            if panel?.panelState == .listening || panel?.panelState == .preActivated {
                 panel?.expand()
             }
         }
@@ -201,10 +219,10 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
             }
         }
 
-        // When the drag session ends, return to hidden if still just listening
+        // When the drag session ends, return to hidden if still just listening or pre-activated
         monitor.onDragEnded = { [weak panel, weak self] in
             self?.cancelHideShelfTimer()
-            if panel?.panelState == .listening {
+            if panel?.panelState == .listening || panel?.panelState == .preActivated {
                 panel?.hide()
             }
         }
