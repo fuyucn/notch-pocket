@@ -19,6 +19,8 @@ public struct SettingsView: View {
     @State private var expiryMinutes: Double
     @State private var maxStorageGB: Double
     @State private var soundEffects: Bool
+    @State private var shelfViewMode: ShelfViewMode
+    @State private var shelfPersistence: ShelfPersistence
     @State private var inputMonitoringStatus: PermissionStatus = .undetermined
     @State private var permissionsManager = PermissionsManager()
 
@@ -30,6 +32,8 @@ public struct SettingsView: View {
         _expiryMinutes = State(initialValue: settingsManager.expiryInterval / 60.0)
         _maxStorageGB = State(initialValue: Double(settingsManager.maxStorageBytes) / 1_000_000_000.0)
         _soundEffects = State(initialValue: settingsManager.soundEffectsEnabled)
+        _shelfViewMode = State(initialValue: settingsManager.shelfViewMode)
+        _shelfPersistence = State(initialValue: settingsManager.shelfPersistence)
     }
 
     public var body: some View {
@@ -101,6 +105,27 @@ public struct SettingsView: View {
                         }
                 }
             }
+            Section("Shelf") {
+                    Picker("View", selection: $shelfViewMode) {
+                        ForEach(ShelfViewMode.allCases, id: \.self) { mode in
+                            Text(mode.label).tag(mode)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                    .onChange(of: shelfViewMode) { _, newValue in
+                        settingsManager.shelfViewMode = newValue
+                    }
+
+                    Picker("Stay expanded", selection: $shelfPersistence) {
+                        ForEach(ShelfPersistence.allCases, id: \.self) { value in
+                            Text(value.label).tag(value)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                    .onChange(of: shelfPersistence) { _, newValue in
+                        settingsManager.shelfPersistence = newValue
+                    }
+                }
             Section("Permissions") {
                     HStack {
                         VStack(alignment: .leading, spacing: 2) {
@@ -133,7 +158,7 @@ public struct SettingsView: View {
                 }
         }
         .formStyle(.grouped)
-        .frame(width: 380, height: 400)
+        .frame(width: 380, height: 480)
         .fixedSize()
         .onAppear {
             inputMonitoringStatus = permissionsManager.inputMonitoringStatus
