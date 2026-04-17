@@ -19,6 +19,8 @@ public struct SettingsView: View {
     @State private var expiryMinutes: Double
     @State private var maxStorageGB: Double
     @State private var soundEffects: Bool
+    @State private var inputMonitoringStatus: PermissionStatus = .undetermined
+    @State private var permissionsManager = PermissionsManager()
 
     public init(settingsManager: SettingsManager) {
         self.settingsManager = settingsManager
@@ -99,10 +101,43 @@ public struct SettingsView: View {
                         }
                 }
             }
+            Section("Permissions") {
+                    HStack {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Input Monitoring")
+                                .font(.system(size: 13, weight: .medium))
+                            Text("Required to detect when you hover or drag files near the notch.")
+                                .font(.system(size: 11))
+                                .foregroundStyle(.secondary)
+                        }
+                        Spacer()
+                        switch inputMonitoringStatus {
+                        case .granted:
+                            Text("Granted")
+                                .font(.system(size: 11, weight: .semibold))
+                                .foregroundStyle(.green)
+                        case .denied, .undetermined:
+                            Button("Grant…") {
+                                if !permissionsManager.requestInputMonitoring() {
+                                    permissionsManager.openInputMonitoringSettings()
+                                }
+                                // Re-check after a short delay
+                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                                    inputMonitoringStatus = permissionsManager.inputMonitoringStatus
+                                }
+                            }
+                            .controlSize(.small)
+                        }
+                    }
+                    .padding(.vertical, 4)
+                }
         }
         .formStyle(.grouped)
         .frame(width: 380, height: 400)
         .fixedSize()
+        .onAppear {
+            inputMonitoringStatus = permissionsManager.inputMonitoringStatus
+        }
     }
 
     private var storageLabel: String {
