@@ -144,6 +144,7 @@ public final class FileShelfManager {
                 fileExtension: existing.fileExtension
             )
         }
+        onItemsChanged?()
         // Return the updated items (post-tag) so the caller sees the app name.
         return items.filter { taggedIDs.contains($0.id) }
     }

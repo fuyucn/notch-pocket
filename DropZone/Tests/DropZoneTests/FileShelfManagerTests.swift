@@ -581,4 +581,71 @@ struct FileShelfManagerTests {
         #expect(added.count == 1)
         #expect(added.first?.fileExtension == "txt")
     }
+
+    @Test @MainActor
+    func addFilesTagsSourceAppName() throws {
+        let tmp = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(at: tmp, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: tmp) }
+
+        let src = tmp.appendingPathComponent("note.txt")
+        try "hello".write(to: src, atomically: true, encoding: .utf8)
+
+        let shelfDir = tmp.appendingPathComponent("shelf", isDirectory: true)
+        let manager = FileShelfManager(directory: shelfDir)
+        try manager.ensureShelfDirectory()
+
+        let added = manager.addFiles(from: [src], sourceAppName: "Finder")
+        #expect(added.count == 1)
+        #expect(added.first?.sourceAppName == "Finder")
+        #expect(added.first?.fileExtension == "txt")
+        #expect(manager.items.first?.sourceAppName == "Finder")
+    }
+
+    @Test @MainActor
+    func addFilesWithNilSourceAppNameBehavesLikeBaseOverload() throws {
+        let tmp = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(at: tmp, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: tmp) }
+
+        let src = tmp.appendingPathComponent("note.txt")
+        try "hello".write(to: src, atomically: true, encoding: .utf8)
+
+        let shelfDir = tmp.appendingPathComponent("shelf", isDirectory: true)
+        let manager = FileShelfManager(directory: shelfDir)
+        try manager.ensureShelfDirectory()
+
+        let added = manager.addFiles(from: [src], sourceAppName: nil)
+        #expect(added.count == 1)
+        #expect(added.first?.sourceAppName == nil)
+        #expect(manager.items.count == 1)
+    }
+
+    @Test @MainActor
+    func addFilesFiresOnItemsChangedTwiceWhenTagging() throws {
+        let tmp = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(at: tmp, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: tmp) }
+
+        let src = tmp.appendingPathComponent("note.txt")
+        try "hello".write(to: src, atomically: true, encoding: .utf8)
+        let src2 = tmp.appendingPathComponent("other.txt")
+        try "world".write(to: src2, atomically: true, encoding: .utf8)
+
+        let shelfDir = tmp.appendingPathComponent("shelf", isDirectory: true)
+        let manager = FileShelfManager(directory: shelfDir)
+        try manager.ensureShelfDirectory()
+
+        nonisolated(unsafe) var callCount = 0
+        manager.onItemsChanged = { callCount += 1 }
+
+        // With sourceAppName: should fire twice (once from base overload, once after tagging)
+        manager.addFiles(from: [src], sourceAppName: "Finder")
+        #expect(callCount == 2)
+
+        // With nil sourceAppName: should fire only once (base overload path, no tagging)
+        let countBefore = callCount
+        manager.addFiles(from: [src2], sourceAppName: nil)
+        #expect(callCount == countBefore + 1)
+    }
 }
