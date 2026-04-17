@@ -11,10 +11,8 @@ public struct NotchPanelRootView: View {
     private var targetSize: CGSize {
         switch viewModel.status {
         case .closed:
-            // Collapsed — approximate notch dimensions for a neat tucked pill.
-            let w = viewModel.geometry.notchRect?.width ?? 200
-            let h = (viewModel.geometry.notchRect?.height ?? 32) + 4
-            return CGSize(width: w + 8, height: h)
+            // Fully hidden when idle — don't render a visible pill under the notch.
+            return .zero
         case .popping:
             let s = viewModel.geometry.preActivatedPanelSize
             return CGSize(width: s.width, height: s.height)
