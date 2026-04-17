@@ -24,7 +24,7 @@ public struct ShelfListView: View {
     }
 
     public var body: some View {
-        ZStack {
+        ZStack(alignment: .topTrailing) {
             RoundedRectangle(cornerRadius: 14, style: .continuous)
                 .fill(isDragInside ? Color.white.opacity(0.06) : Color.clear)
             RoundedRectangle(cornerRadius: 14, style: .continuous)
@@ -52,6 +52,10 @@ public struct ShelfListView: View {
                     }
                 }
                 .padding(6)
+            }
+            if !sortedItems.isEmpty {
+                AllDragHandle(items: sortedItems)
+                    .padding(6)
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)

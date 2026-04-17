@@ -1,0 +1,93 @@
+import SwiftUI
+import AppKit
+
+/// A small pill-shaped SwiftUI view that, when pressed and dragged, starts a
+/// native `NSDraggingSession` carrying every file in the shelf. macOS's
+/// SwiftUI `.onDrag` only emits a single `NSItemProvider`, which drag-receivers
+/// interpret as a single-file transfer — we need a true multi-item drag so
+/// Finder and friends create one file per item. Bridging to AppKit via
+/// `NSViewRepresentable` is the simplest path.
+@MainActor
+public struct AllDragHandle: View {
+    public let items: [ShelfItem]
+
+    public init(items: [ShelfItem]) {
+        self.items = items
+    }
+
+    public var body: some View {
+        MultiFileDragSourceView(urls: items.map { $0.shelfURL })
+            .frame(width: 44, height: 22)
+            .overlay(
+                HStack(spacing: 0) {
+                    Text("All")
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundStyle(.white)
+                }
+                .allowsHitTesting(false)
+            )
+            .background(
+                Capsule().fill(Color.white.opacity(0.18))
+            )
+            .overlay(
+                Capsule().strokeBorder(Color.white.opacity(0.25), lineWidth: 0.5)
+            )
+    }
+}
+
+@MainActor
+private struct MultiFileDragSourceView: NSViewRepresentable {
+    let urls: [URL]
+
+    func makeNSView(context: Context) -> DragSourceNSView {
+        let v = DragSourceNSView()
+        v.urls = urls
+        return v
+    }
+
+    func updateNSView(_ nsView: DragSourceNSView, context: Context) {
+        nsView.urls = urls
+    }
+}
+
+/// AppKit view that begins a multi-file drag session on mouseDown.
+@MainActor
+private final class DragSourceNSView: NSView, NSDraggingSource {
+    var urls: [URL] = []
+
+    override init(frame frameRect: NSRect) {
+        super.init(frame: frameRect)
+        wantsLayer = true
+    }
+
+    required init?(coder: NSCoder) { nil }
+
+    override func mouseDown(with event: NSEvent) {
+        guard !urls.isEmpty else {
+            super.mouseDown(with: event)
+            return
+        }
+
+        let items = urls.map { url -> NSDraggingItem in
+            let provider = NSItemProvider(contentsOf: url)
+                ?? NSItemProvider(object: url as NSURL)
+            let item = NSDraggingItem(pasteboardWriter: provider as? NSPasteboardWriting ?? (url as NSURL))
+            // Place each drag image slightly offset so users see a stack.
+            item.draggingFrame = NSRect(x: 0, y: 0, width: 32, height: 32)
+            return item
+        }
+
+        beginDraggingSession(with: items, event: event, source: self)
+    }
+
+    // MARK: - NSDraggingSource
+
+    nonisolated func draggingSession(
+        _ session: NSDraggingSession,
+        sourceOperationMaskFor context: NSDraggingContext
+    ) -> NSDragOperation {
+        // Copy is the safe default. Moving/removing-on-drag-out is a future
+        // enhancement (needs session-ended delegate + file-promise plumbing).
+        return [.copy]
+    }
+}

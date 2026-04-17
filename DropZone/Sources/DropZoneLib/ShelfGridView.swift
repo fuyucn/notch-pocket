@@ -26,7 +26,7 @@ public struct ShelfGridView: View {
     public var body: some View {
         // Single container regardless of empty/non-empty so the drop target
         // frame doesn't reshuffle when the first file lands.
-        ZStack {
+        ZStack(alignment: .topTrailing) {
             RoundedRectangle(cornerRadius: 14, style: .continuous)
                 .fill(isDragInside ? Color.white.opacity(0.06) : Color.clear)
             RoundedRectangle(cornerRadius: 14, style: .continuous)
@@ -54,6 +54,10 @@ public struct ShelfGridView: View {
                 }
                 .padding(12)
                 .frame(maxWidth: .infinity, minHeight: 76)
+            }
+            if !sortedItems.isEmpty {
+                AllDragHandle(items: sortedItems)
+                    .padding(6)
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -121,6 +125,9 @@ private struct ShelfGridCell: View {
             Button("Remove", role: .destructive) { onRemove() }
         }
         .onTapGesture(count: 2) { onOpen() }
+        .onDrag {
+            NSItemProvider(contentsOf: item.shelfURL) ?? NSItemProvider(object: item.shelfURL as NSURL)
+        }
     }
 
     /// Generic icon by file extension — keep it simple; QuickLook/FileThumbnailView

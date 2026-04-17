@@ -82,6 +82,9 @@ public struct ShelfListRowView: View {
             Button("Remove", role: .destructive) { onRemove() }
         }
         .onTapGesture(count: 2) { onOpen() }
+        .onDrag {
+            NSItemProvider(contentsOf: item.shelfURL) ?? NSItemProvider(object: item.shelfURL as NSURL)
+        }
     }
 
     private func ageString(_ date: Date) -> String {
