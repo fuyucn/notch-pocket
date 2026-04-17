@@ -17,29 +17,38 @@ public struct ShelfListView: View {
     }
 
     public var body: some View {
-        if items.isEmpty {
-            VStack(spacing: 4) {
-                Image(systemName: "tray")
-                    .font(.system(size: 18))
-                    .foregroundStyle(.white.opacity(0.4))
-                Text("No files on the shelf")
-                    .font(.system(size: 11))
-                    .foregroundStyle(.white.opacity(0.5))
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-        } else {
-            ScrollView {
-                LazyVStack(spacing: 0) {
-                    ForEach(sortedItems) { item in
-                        ShelfListRowView(
-                            item: item,
-                            onOpen: { onOpen(item) },
-                            onRemove: { onRemove(item.id) }
-                        )
-                        Divider().background(Color.white.opacity(0.06))
+        ZStack {
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .strokeBorder(
+                    Color.white.opacity(0.25),
+                    style: StrokeStyle(lineWidth: 1, dash: [4, 3])
+                )
+            if items.isEmpty {
+                VStack(spacing: 4) {
+                    Image(systemName: "tray")
+                        .font(.system(size: 18))
+                        .foregroundStyle(.white.opacity(0.4))
+                    Text("Drop files here")
+                        .font(.system(size: 11))
+                        .foregroundStyle(.white.opacity(0.5))
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else {
+                ScrollView {
+                    LazyVStack(spacing: 0) {
+                        ForEach(sortedItems) { item in
+                            ShelfListRowView(
+                                item: item,
+                                onOpen: { onOpen(item) },
+                                onRemove: { onRemove(item.id) }
+                            )
+                            Divider().background(Color.white.opacity(0.06))
+                        }
                     }
+                    .padding(6)
                 }
             }
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }

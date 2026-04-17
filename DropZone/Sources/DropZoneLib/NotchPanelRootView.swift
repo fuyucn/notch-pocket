@@ -162,12 +162,11 @@ public struct NotchPanelRootView: View {
             let mode = viewModel.settingsManager?.shelfViewMode ?? .list
             VStack(spacing: 0) {
                 notchTopBar
-                Spacer().frame(height: 6)
                 titleRow
                 contentBody(shelfManager: shelfManager, mode: mode)
-                    .padding(.horizontal, 16)
-                    .padding(.top, 8)
-                    .padding(.bottom, 14)
+                    .padding(.horizontal, 14)
+                    .padding(.top, 4)
+                    .padding(.bottom, 12)
             }
             .frame(width: size.width, height: size.height)
             .clipShape(NotchShape(topCornerRadius: targetTopRadius, bottomCornerRadius: targetBottomRadius))
@@ -182,15 +181,13 @@ public struct NotchPanelRootView: View {
     private var titleRow: some View {
         HStack {
             Text("Notch Pocket")
-                .font(.system(size: 16, weight: .semibold))
+                .font(.system(size: 13, weight: .semibold))
                 .foregroundStyle(.white)
             Spacer()
-            Text("⋯")
-                .font(.system(size: 14))
-                .foregroundStyle(.white.opacity(0.4))
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 4)
+        .padding(.horizontal, 14)
+        .padding(.top, 2)
+        .padding(.bottom, 2)
     }
 
     @ViewBuilder

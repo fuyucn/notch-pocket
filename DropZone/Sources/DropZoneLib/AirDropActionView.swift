@@ -12,15 +12,16 @@ public struct AirDropActionView: View {
 
     public var body: some View {
         Button(action: onTap) {
-            VStack(spacing: 8) {
+            VStack(spacing: 6) {
                 Image(systemName: "dot.radiowaves.forward")
-                    .font(.system(size: 22, weight: .medium))
+                    .font(.system(size: 20, weight: .medium))
                     .foregroundStyle(.white)
                 Text("AirDrop")
-                    .font(.system(size: 12, weight: .semibold))
+                    .font(.system(size: 11, weight: .semibold))
                     .foregroundStyle(.white)
             }
-            .frame(width: 90, height: 110)
+            .frame(width: 86)
+            .frame(maxHeight: .infinity)
             .background(
                 RoundedRectangle(cornerRadius: 14, style: .continuous)
                     .fill(Color(red: 0.10, green: 0.34, blue: 0.36).opacity(isEnabled ? 0.90 : 0.35))

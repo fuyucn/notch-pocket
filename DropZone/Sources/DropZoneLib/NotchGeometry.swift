@@ -27,7 +27,7 @@ public struct NotchGeometry: Sendable {
     /// Narrow pre-activation bar displayed when the cursor enters the pre-activation zone.
     public static let preActivatedSize = NSSize(width: 380, height: 120)
     /// Full shelf panel size (list view / thumbnail view).
-    public static let shelfExpandedSize = NSSize(width: 600, height: 360)
+    public static let shelfExpandedSize = NSSize(width: 560, height: 220)
     /// Hysteresis outset (px) between the pre-activation rect and the activation zone.
     public static let preActivationOutset: CGFloat = 8
     /// Corner radius matching the notch shape.
@@ -49,12 +49,12 @@ public struct NotchGeometry: Sendable {
     }
 
     /// Panel size in the opened state. Wider than popping to fit shelf content.
-    /// Width = notch + sidePadding*6 (default ~720 for 200-wide notch),
-    /// height = matches existing shelfExpandedSize.height.
+    /// Width = notch + sidePadding * 4 (default 520 for 200-wide notch),
+    /// height = matches shelfExpandedSize.height (compact Dynamic Island feel).
     public var openedPanelSize: NSSize {
         let notchWidth = notchRect?.width ?? 200
         return NSSize(
-            width: notchWidth + Self.sidePadding * 6,
+            width: notchWidth + Self.sidePadding * 4,
             height: Self.shelfExpandedSize.height
         )
     }
