@@ -240,7 +240,7 @@ struct NotchGeometryTests {
     }
 
     @Test
-    func hoverTriggerRectIsBelowMenuBar() {
+    func hoverTriggerRectIsTopAnchored() {
         let screen = NSRect(x: 0, y: 0, width: 1600, height: 1000)
         let notch = NSRect(x: 700, y: 968, width: 200, height: 32)
         let geo = NotchGeometry(
@@ -253,7 +253,7 @@ struct NotchGeometryTests {
         #expect(rect.width == screen.width * 0.5)
         #expect(rect.height == 200)
         #expect(rect.midX == screen.midX)
-        #expect(rect.maxY == notch.minY)  // top of hover rect aligns with bottom of notch
+        #expect(rect.maxY == screen.maxY)   // top-anchored to screen, includes notch row
     }
 
     @Test
@@ -266,7 +266,7 @@ struct NotchGeometryTests {
             hasNotch: false
         )
         let rect = geo.hoverTriggerRect
-        #expect(rect.maxY == screen.maxY - 24)
+        #expect(rect.maxY == screen.maxY)
     }
 
     @Test

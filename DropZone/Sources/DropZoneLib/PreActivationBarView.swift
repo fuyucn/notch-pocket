@@ -18,11 +18,12 @@ public struct PreActivationBarView: View {
 
     public var body: some View {
         VStack(spacing: 6) {
+            Spacer().frame(height: 36)   // sit below the physical notch cutout
             Image(systemName: "tray.and.arrow.down.fill")
-                .font(.system(size: 28, weight: .medium))
+                .font(.system(size: 22, weight: .medium))
                 .foregroundStyle(.white.opacity(0.9))
             Text("Drop here")
-                .font(.system(size: 16, weight: .semibold))
+                .font(.system(size: 15, weight: .semibold))
                 .foregroundStyle(.white)
             if let name = primaryFileName {
                 Text(name)
@@ -32,9 +33,9 @@ public struct PreActivationBarView: View {
                     .truncationMode(.middle)
                     .frame(maxWidth: 340)
             }
+            Spacer(minLength: 0)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .padding(.horizontal, 16)
-        .padding(.vertical, 10)
     }
 }

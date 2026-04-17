@@ -15,13 +15,14 @@ public struct NotchPanelRootView: View {
                 Color.clear
             case .popping:
                 poppingContent
-                    .transition(.opacity.combined(with: .scale(scale: 0.9)))
+                    .transition(.opacity.combined(with: .scale(scale: 0.95, anchor: .top)))
             case .opened:
                 openedContent
-                    .transition(.opacity.combined(with: .scale(scale: 0.9)))
+                    .transition(.opacity.combined(with: .scale(scale: 0.95, anchor: .top)))
             }
         }
         .animation(.easeOut(duration: 0.22), value: viewModel.status)
+        // Top-align so the sub-pills sit flush to the screen top and visually wrap the notch.
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
     }
 
@@ -34,16 +35,14 @@ public struct NotchPanelRootView: View {
         )
         .frame(width: NotchGeometry.preActivatedSize.width, height: NotchGeometry.preActivatedSize.height)
         .background(
-            RoundedRectangle(cornerRadius: 24, style: .continuous)
-                .fill(Color.black.opacity(0.85))
+            RoundedRectangle(cornerRadius: 28, style: .continuous)
+                .fill(Color.black.opacity(0.88))
         )
         .overlay(
-            RoundedRectangle(cornerRadius: 24, style: .continuous)
+            RoundedRectangle(cornerRadius: 28, style: .continuous)
                 .strokeBorder(Color.white.opacity(0.15), lineWidth: 0.5)
         )
         .shadow(color: .black.opacity(0.35), radius: 12, y: 4)
-        .frame(maxWidth: .infinity, alignment: .center)
-        .padding(.top, 4)
     }
 
     @ViewBuilder
@@ -51,28 +50,28 @@ public struct NotchPanelRootView: View {
         OpenedShelfPlaceholderView()
             .frame(width: NotchGeometry.shelfExpandedSize.width, height: NotchGeometry.shelfExpandedSize.height)
             .background(
-                RoundedRectangle(cornerRadius: 24, style: .continuous)
-                    .fill(Color.black.opacity(0.9))
+                RoundedRectangle(cornerRadius: 28, style: .continuous)
+                    .fill(Color.black.opacity(0.92))
             )
             .overlay(
-                RoundedRectangle(cornerRadius: 24, style: .continuous)
+                RoundedRectangle(cornerRadius: 28, style: .continuous)
                     .strokeBorder(Color.white.opacity(0.15), lineWidth: 0.5)
             )
             .shadow(color: .black.opacity(0.45), radius: 14, y: 6)
-            .frame(maxWidth: .infinity, alignment: .center)
-            .padding(.top, 4)
     }
 }
 
 private struct OpenedShelfPlaceholderView: View {
     var body: some View {
         VStack {
+            Spacer().frame(height: 40)   // visual breathing room below notch
             Text("Shelf")
                 .font(.system(size: 16, weight: .semibold))
                 .foregroundStyle(.white)
             Text("Drop files here")
                 .font(.system(size: 12))
                 .foregroundStyle(.white.opacity(0.7))
+            Spacer()
         }
     }
 }

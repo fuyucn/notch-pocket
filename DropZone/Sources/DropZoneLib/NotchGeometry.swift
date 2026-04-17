@@ -110,22 +110,15 @@ public struct NotchGeometry: Sendable {
         activationZone.insetBy(dx: -Self.preActivationOutset, dy: -Self.preActivationOutset)
     }
 
-    /// Large rect covering the top of the screen used by HoverDetectionPanel to detect
-    /// drag proximity. Anchored below the menu bar / notch so it doesn't interfere with
-    /// system menus. 50% of screen width, 200pt tall, horizontally centered.
+    /// Large rect covering the top of the screen used by NotchPanel. Includes the
+    /// notch/menu-bar row so the panel can be anchored flush to the top of the
+    /// screen and visually wrap the notch like a Dynamic Island.
     public var hoverTriggerRect: NSRect {
         let width = screenFrame.width * 0.5
         let height: CGFloat = 200
         let x = screenFrame.midX - width / 2
-        // Anchor top of rect to the bottom of the notch/menu-bar area if we have a notch,
-        // otherwise to `screenFrame.maxY - 24` (approximate standard menu bar height).
-        let topY: CGFloat
-        if let notch = notchRect {
-            topY = notch.minY  // bottom edge of notch == top of usable area
-        } else {
-            topY = screenFrame.maxY - 24
-        }
-        return NSRect(x: x, y: topY - height, width: width, height: height)
+        let y = screenFrame.maxY - height   // top-anchored
+        return NSRect(x: x, y: y, width: width, height: height)
     }
 
     // MARK: - Private
