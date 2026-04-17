@@ -535,4 +535,50 @@ struct FileShelfManagerTests {
         try? FileManager.default.removeItem(at: sourceDir)
         try? FileManager.default.removeItem(at: shelfDir)
     }
+
+    // MARK: - sourceAppName and fileExtension
+
+    @Test @MainActor
+    func shelfItemDefaultsSourceAppAndExtensionToNil() {
+        let item = ShelfItem(
+            originalURL: URL(fileURLWithPath: "/tmp/foo.pdf"),
+            shelfURL: URL(fileURLWithPath: "/tmp/shelf/foo.pdf"),
+            displayName: "foo.pdf",
+            fileSize: 42
+        )
+        #expect(item.sourceAppName == nil)
+        #expect(item.fileExtension == nil)
+    }
+
+    @Test @MainActor
+    func shelfItemStoresSourceAppAndExtension() {
+        let item = ShelfItem(
+            originalURL: URL(fileURLWithPath: "/tmp/foo.pdf"),
+            shelfURL: URL(fileURLWithPath: "/tmp/shelf/foo.pdf"),
+            displayName: "foo.pdf",
+            fileSize: 42,
+            sourceAppName: "Finder",
+            fileExtension: "pdf"
+        )
+        #expect(item.sourceAppName == "Finder")
+        #expect(item.fileExtension == "pdf")
+    }
+
+    @Test @MainActor
+    func addFilesPopulatesFileExtension() throws {
+        let tmp = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(at: tmp, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: tmp) }
+
+        let src = tmp.appendingPathComponent("note.txt")
+        try "hello".write(to: src, atomically: true, encoding: .utf8)
+
+        let shelfDir = tmp.appendingPathComponent("shelf", isDirectory: true)
+        let manager = FileShelfManager(directory: shelfDir)
+        try manager.ensureShelfDirectory()
+
+        let added = manager.addFiles(from: [src])
+        #expect(added.count == 1)
+        #expect(added.first?.fileExtension == "txt")
+    }
 }

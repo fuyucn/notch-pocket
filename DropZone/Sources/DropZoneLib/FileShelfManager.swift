@@ -14,14 +14,29 @@ public struct ShelfItem: Sendable, Identifiable {
     public let addedAt: Date
     /// File size in bytes.
     public let fileSize: Int64
+    /// Name of the application the file was dragged from, if known.
+    public let sourceAppName: String?
+    /// Lowercased file extension (without the dot), if any.
+    public let fileExtension: String?
 
-    public init(id: UUID = UUID(), originalURL: URL, shelfURL: URL, displayName: String, addedAt: Date = Date(), fileSize: Int64) {
+    public init(
+        id: UUID = UUID(),
+        originalURL: URL,
+        shelfURL: URL,
+        displayName: String,
+        addedAt: Date = Date(),
+        fileSize: Int64,
+        sourceAppName: String? = nil,
+        fileExtension: String? = nil
+    ) {
         self.id = id
         self.originalURL = originalURL
         self.shelfURL = shelfURL
         self.displayName = displayName
         self.addedAt = addedAt
         self.fileSize = fileSize
+        self.sourceAppName = sourceAppName
+        self.fileExtension = fileExtension
     }
 }
 
@@ -107,6 +122,30 @@ public final class FileShelfManager {
             onItemsChanged?()
         }
         return added
+    }
+
+    /// Add files and tag them with a source application name.
+    /// Used when the drop pasteboard carries `com.apple.pasteboard.source-app-bundle-identifier`.
+    @discardableResult
+    public func addFiles(from urls: [URL], sourceAppName: String?) -> [ShelfItem] {
+        let added = addFiles(from: urls)
+        guard let sourceAppName, !added.isEmpty else { return added }
+        let taggedIDs = Set(added.map { $0.id })
+        items = items.map { existing in
+            guard taggedIDs.contains(existing.id) else { return existing }
+            return ShelfItem(
+                id: existing.id,
+                originalURL: existing.originalURL,
+                shelfURL: existing.shelfURL,
+                displayName: existing.displayName,
+                addedAt: existing.addedAt,
+                fileSize: existing.fileSize,
+                sourceAppName: sourceAppName,
+                fileExtension: existing.fileExtension
+            )
+        }
+        // Return the updated items (post-tag) so the caller sees the app name.
+        return items.filter { taggedIDs.contains($0.id) }
     }
 
     /// Remove a specific item from the shelf.
@@ -210,12 +249,15 @@ public final class FileShelfManager {
             fileSize = 0
         }
 
+        let ext = sourceURL.pathExtension.lowercased()
         return ShelfItem(
             id: itemID,
             originalURL: sourceURL,
             shelfURL: destURL,
             displayName: fileName,
-            fileSize: fileSize
+            fileSize: fileSize,
+            sourceAppName: nil,
+            fileExtension: ext.isEmpty ? nil : ext
         )
     }
 }
