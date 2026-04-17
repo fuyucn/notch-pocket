@@ -158,34 +158,63 @@ public struct NotchPanelRootView: View {
     @ViewBuilder
     private var openedContent: some View {
         if let shelfManager = viewModel.shelfManager {
-            let mode = viewModel.settingsManager?.shelfViewMode ?? .list
             let size = viewModel.geometry.openedPanelSize
+            let mode = viewModel.settingsManager?.shelfViewMode ?? .list
             VStack(spacing: 0) {
                 notchTopBar
-                Spacer().frame(height: 8)
-                Group {
-                    if mode == .list {
-                        ShelfListView(
-                            items: shelfManager.items,
-                            onOpen: { item in NSWorkspace.shared.open(item.shelfURL) },
-                            onRemove: { [weak shelfManager] id in shelfManager?.removeItem(id) }
-                        )
-                    } else {
-                        ShelfContainerView(
-                            shelfManager: shelfManager,
-                            refreshToken: viewModel.shelfRefreshToken
-                        )
-                    }
-                }
-                .padding(.horizontal, 20)
-                .padding(.bottom, 16)
+                Spacer().frame(height: 6)
+                titleRow
+                contentBody(shelfManager: shelfManager, mode: mode)
+                    .padding(.horizontal, 16)
+                    .padding(.top, 8)
+                    .padding(.bottom, 14)
             }
             .frame(width: size.width, height: size.height)
             .clipShape(NotchShape(topCornerRadius: targetTopRadius, bottomCornerRadius: targetBottomRadius))
-            .id(viewModel.shelfRefreshToken) // cache-bust the whole sub-tree
+            .id(viewModel.shelfRefreshToken)
         } else {
             Text("Shelf unavailable")
                 .foregroundStyle(.white.opacity(0.6))
+        }
+    }
+
+    @ViewBuilder
+    private var titleRow: some View {
+        HStack {
+            Text("Notch Pocket")
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundStyle(.white)
+            Spacer()
+            Text("⋯")
+                .font(.system(size: 14))
+                .foregroundStyle(.white.opacity(0.4))
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 4)
+    }
+
+    @ViewBuilder
+    private func contentBody(shelfManager: FileShelfManager, mode: ShelfViewMode) -> some View {
+        HStack(spacing: 10) {
+            let urls = shelfManager.items.map { $0.shelfURL }
+            AirDropActionView(
+                isEnabled: !urls.isEmpty,
+                onTap: { AirDropService.share(urls: urls) }
+            )
+            switch mode {
+            case .thumbnail:
+                ShelfGridView(
+                    items: shelfManager.items,
+                    onOpen: { item in NSWorkspace.shared.open(item.shelfURL) },
+                    onRemove: { [weak shelfManager] id in shelfManager?.removeItem(id) }
+                )
+            case .list:
+                ShelfListView(
+                    items: shelfManager.items,
+                    onOpen: { item in NSWorkspace.shared.open(item.shelfURL) },
+                    onRemove: { [weak shelfManager] id in shelfManager?.removeItem(id) }
+                )
+            }
         }
     }
 }
