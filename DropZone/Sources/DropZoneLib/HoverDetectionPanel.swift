@@ -31,7 +31,9 @@ public final class HoverDetectionPanel: NSPanel {
         isOpaque = false
         backgroundColor = .clear
         hasShadow = false
-        ignoresMouseEvents = false // We need draggingEntered/draggingExited
+        // Let clicks pass through to windows below; tracking areas and
+        // NSDraggingDestination still work independently of this flag.
+        ignoresMouseEvents = true
         hidesOnDeactivate = false
         animationBehavior = .none
         titleVisibility = .hidden
@@ -55,20 +57,39 @@ public final class HoverDetectionPanel: NSPanel {
     // We never want this panel to steal keyboard focus.
     override public var canBecomeKey: Bool { false }
     override public var canBecomeMain: Bool { false }
-
-    // Pass all events through to what's underneath — we only care about drag events.
-    // Drag events are handled by HoverTrackingView as NSDraggingDestination.
-    override public func sendEvent(_ event: NSEvent) { }
 }
 
 @MainActor
 private final class HoverTrackingView: NSView {
     weak var owner: HoverDetectionPanel?
+    private var trackingArea: NSTrackingArea?
 
     override func viewDidMoveToWindow() {
         super.viewDidMoveToWindow()
         registerForDraggedTypes([.fileURL, NSPasteboard.PasteboardType("com.apple.NSFilePromiseItemMetaData")])
     }
+
+    override func updateTrackingAreas() {
+        super.updateTrackingAreas()
+        if let area = trackingArea { removeTrackingArea(area) }
+        // Tracking areas fire regardless of `window.ignoresMouseEvents`,
+        // so we still get entered/exited for bare hover.
+        let area = NSTrackingArea(
+            rect: bounds,
+            options: [.mouseEnteredAndExited, .activeAlways, .inVisibleRect],
+            owner: self,
+            userInfo: nil
+        )
+        addTrackingArea(area)
+        trackingArea = area
+    }
+
+    // Route clicks through — hit-test negative means the window doesn't
+    // intercept them, so the app below receives them.
+    override func hitTest(_ point: NSPoint) -> NSView? { nil }
+
+    override func mouseEntered(with event: NSEvent) { owner?.deliverEntered() }
+    override func mouseExited(with event: NSEvent) { owner?.deliverExited() }
 
     override func draggingEntered(_ sender: any NSDraggingInfo) -> NSDragOperation {
         owner?.deliverEntered()
