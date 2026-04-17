@@ -26,25 +26,25 @@ struct NotchViewModelTests {
     }
 
     @Test @MainActor
-    func fileDraggingIntoHoverRectTransitionsToPopping() {
+    func draggingIntoHoverRectTransitionsToPopping() {
         let vm = makeVM()
-        vm.isFileDragging = true
+        // hoverTriggerRect = screen.width*0.5 centered, 200 tall, maxY == notch.minY (968).
+        // So rect is (400..1200, 768..968). Point (800, 900) is inside.
         vm.updateMouseLocation(NSPoint(x: 800, y: 900), isDragging: true)
         #expect(vm.status == .popping)
     }
 
     @Test @MainActor
-    func fileDraggingIntoActivationZoneTransitionsToOpened() {
+    func draggingIntoActivationZoneTransitionsToOpened() {
         let vm = makeVM()
-        vm.isFileDragging = true
+        // activationZone = (670..930, 908..1010). Point (800, 950) is inside.
         vm.updateMouseLocation(NSPoint(x: 800, y: 950), isDragging: true)
         #expect(vm.status == .opened)
     }
 
     @Test @MainActor
-    func leavingAllRectsWhileFileDraggingReturnsToClosed() {
+    func leavingAllRectsWhileDraggingReturnsToClosed() {
         let vm = makeVM()
-        vm.isFileDragging = true
         vm.updateMouseLocation(NSPoint(x: 800, y: 900), isDragging: true)
         #expect(vm.status == .popping)
         vm.updateMouseLocation(NSPoint(x: 100, y: 100), isDragging: true)
@@ -52,20 +52,9 @@ struct NotchViewModelTests {
     }
 
     @Test @MainActor
-    func windowDragIgnoredWhenNoFileDrag() {
+    func dragEndedClosesIfNotInsideOpenedRect() {
         let vm = makeVM()
-        // isFileDragging stays false (no real file drag). Moving the cursor
-        // with mouse pressed (isDragging=true) must NOT pop the panel.
         vm.updateMouseLocation(NSPoint(x: 800, y: 900), isDragging: true)
-        #expect(vm.status == .closed)
-    }
-
-    @Test @MainActor
-    func fileDragEndedClosesIfNotInsideOpenedRect() {
-        let vm = makeVM()
-        vm.isFileDragging = true
-        vm.updateMouseLocation(NSPoint(x: 800, y: 900), isDragging: true)
-        vm.isFileDragging = false
         vm.updateMouseLocation(NSPoint(x: 800, y: 900), isDragging: false)
         #expect(vm.status == .closed)
     }

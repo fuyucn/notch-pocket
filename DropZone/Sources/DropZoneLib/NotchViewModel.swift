@@ -13,12 +13,6 @@ public final class NotchViewModel: ObservableObject {
     @Published public var primaryFileName: String?
     @Published public var extraCount: Int = 0
     @Published public var shelfCount: Int = 0
-    /// Set true by `NotchDropForwarder.draggingEntered` when a real file drag
-    /// arrives, false on `draggingExited` / drop. Only this flag (not the
-    /// generic `leftMouseDragged` state from EventMonitors) decides whether
-    /// moving the cursor into the hover rect should pop the panel — otherwise
-    /// ordinary window-move / text-select drags would trigger it.
-    @Published public var isFileDragging: Bool = false
     /// Incremented whenever the shelf content changes, so SwiftUI consumers can
     /// re-bind their NSViewRepresentable to pick up manager state.
     @Published public var shelfRefreshToken: Int = 0
@@ -45,11 +39,7 @@ public final class NotchViewModel: ObservableObject {
         openStickyUntil = Date().addingTimeInterval(seconds)
     }
 
-    /// Drive the status from a pointer location. The `isDragging` parameter
-    /// originated from a generic `.leftMouseDragged` monitor which fires for
-    /// ANY drag (window move, text select, etc.); it is therefore ignored
-    /// here in favor of `isFileDragging`, which is only set true when a real
-    /// file drag enters our panel (via `NotchDropForwarder`).
+    /// Drive the status from a pointer location + drag flag.
     public func updateMouseLocation(_ point: NSPoint, isDragging: Bool) {
         if let deadline = openStickyUntil, Date() < deadline {
             if status != .opened { status = .opened }
@@ -57,7 +47,7 @@ public final class NotchViewModel: ObservableObject {
         } else if openStickyUntil != nil {
             openStickyUntil = nil  // expired, resume normal logic
         }
-        guard isFileDragging else {
+        guard isDragging else {
             if status != .closed { status = .closed }
             return
         }
