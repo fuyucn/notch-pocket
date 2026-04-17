@@ -282,4 +282,41 @@ struct SettingsManagerTests {
         let multipliers = AnimationSpeed.allCases.map(\.durationMultiplier)
         #expect(Set(multipliers).count == multipliers.count) // All unique
     }
+
+    // MARK: - Shelf View Mode
+
+    @Test @MainActor
+    func shelfViewModeDefaultsToList() {
+        let defaults = UserDefaults(suiteName: "test.shelfViewMode.\(UUID())")!
+        defer { defaults.removePersistentDomain(forName: defaults.dictionaryRepresentation().keys.first ?? "") }
+        let settings = SettingsManager(defaults: defaults)
+        #expect(settings.shelfViewMode == .list)
+    }
+
+    @Test @MainActor
+    func shelfViewModeRoundTrip() {
+        let defaults = UserDefaults(suiteName: "test.shelfViewMode.rt.\(UUID())")!
+        let settings = SettingsManager(defaults: defaults)
+        settings.shelfViewMode = .thumbnail
+        #expect(settings.shelfViewMode == .thumbnail)
+        settings.shelfViewMode = .list
+        #expect(settings.shelfViewMode == .list)
+    }
+
+    @Test @MainActor
+    func shelfPersistenceDefaultsToPersistent() {
+        let defaults = UserDefaults(suiteName: "test.shelfPersistence.\(UUID())")!
+        let settings = SettingsManager(defaults: defaults)
+        #expect(settings.shelfPersistence == .persistent)
+    }
+
+    @Test @MainActor
+    func shelfPersistenceRoundTrip() {
+        let defaults = UserDefaults(suiteName: "test.shelfPersistence.rt.\(UUID())")!
+        let settings = SettingsManager(defaults: defaults)
+        settings.shelfPersistence = .autoDismiss
+        #expect(settings.shelfPersistence == .autoDismiss)
+        settings.shelfPersistence = .persistent
+        #expect(settings.shelfPersistence == .persistent)
+    }
 }

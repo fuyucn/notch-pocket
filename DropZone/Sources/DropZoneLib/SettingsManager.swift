@@ -10,6 +10,8 @@ private enum SettingsKey {
     static let expiryInterval = "expiryInterval"
     static let soundEffectsEnabled = "soundEffectsEnabled"
     static let showOnAllDisplays = "showOnAllDisplays"
+    static let shelfViewMode = "shelfViewMode"
+    static let shelfPersistence = "shelfPersistence"
 }
 
 /// Animation speed presets.
@@ -33,6 +35,30 @@ public enum AnimationSpeed: Int, CaseIterable, Sendable {
         case .slow: 1.5
         case .normal: 1.0
         case .fast: 0.5
+        }
+    }
+}
+
+public enum ShelfViewMode: Int, CaseIterable, Sendable {
+    case list = 0
+    case thumbnail = 1
+
+    public var label: String {
+        switch self {
+        case .list: "List"
+        case .thumbnail: "Thumbnails"
+        }
+    }
+}
+
+public enum ShelfPersistence: Int, CaseIterable, Sendable {
+    case persistent = 0
+    case autoDismiss = 1
+
+    public var label: String {
+        switch self {
+        case .persistent: "Until I close it"
+        case .autoDismiss: "Auto-hide after drop"
         }
     }
 }
@@ -65,6 +91,8 @@ public final class SettingsManager {
             SettingsKey.expiryInterval: 3600.0, // 1 hour
             SettingsKey.soundEffectsEnabled: true,
             SettingsKey.showOnAllDisplays: false,
+            SettingsKey.shelfViewMode: ShelfViewMode.list.rawValue,
+            SettingsKey.shelfPersistence: ShelfPersistence.persistent.rawValue,
         ])
     }
 
@@ -162,6 +190,32 @@ public final class SettingsManager {
         get { defaults.bool(forKey: SettingsKey.showOnAllDisplays) }
         set {
             defaults.set(newValue, forKey: SettingsKey.showOnAllDisplays)
+            notifyChanged()
+        }
+    }
+
+    // MARK: - Shelf View Mode
+
+    public var shelfViewMode: ShelfViewMode {
+        get {
+            let raw = defaults.integer(forKey: SettingsKey.shelfViewMode)
+            return ShelfViewMode(rawValue: raw) ?? .list
+        }
+        set {
+            defaults.set(newValue.rawValue, forKey: SettingsKey.shelfViewMode)
+            notifyChanged()
+        }
+    }
+
+    // MARK: - Shelf Persistence
+
+    public var shelfPersistence: ShelfPersistence {
+        get {
+            let raw = defaults.integer(forKey: SettingsKey.shelfPersistence)
+            return ShelfPersistence(rawValue: raw) ?? .persistent
+        }
+        set {
+            defaults.set(newValue.rawValue, forKey: SettingsKey.shelfPersistence)
             notifyChanged()
         }
     }
