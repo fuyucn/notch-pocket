@@ -35,12 +35,18 @@ public final class NotchDropForwarder: NSView {
         onDraggingChanged?(false, [])
     }
 
-    /// Check pasteboard for at least one readable file URL. AppKit will
-    /// register drags for many non-file transfers (window drags, arbitrary
-    /// URLs, text with embedded URL metadata) that announce
-    /// `NSPasteboard.PasteboardType.fileURL` but don't actually carry one.
+    /// Check pasteboard for at least one URL that points to a real file on
+    /// disk. Apps like Chrome publish `NSPasteboard.PasteboardType.fileURL`
+    /// for window-drag / tab-drag content (download URLs, bookmark URLs) —
+    /// the URL is a real `isFileURL == true` URL but the path doesn't
+    /// actually exist on the filesystem. We insist on an existing file so
+    /// that only real Finder-style file drags activate.
     static func pasteboardHasFileURLs(_ pb: NSPasteboard) -> Bool {
-        !readURLs(from: pb).isEmpty
+        let urls = readURLs(from: pb)
+        let fm = FileManager.default
+        return urls.contains { url in
+            url.isFileURL && fm.fileExists(atPath: url.path)
+        }
     }
 
     public override func performDragOperation(_ sender: any NSDraggingInfo) -> Bool {
