@@ -240,10 +240,11 @@ struct NotchGeometryTests {
     }
 
     @Test
-    func hoverTriggerRectIs50PercentScreenWidthAnd200Tall() {
+    func hoverTriggerRectIsBelowMenuBar() {
         let screen = NSRect(x: 0, y: 0, width: 1600, height: 1000)
+        let notch = NSRect(x: 700, y: 968, width: 200, height: 32)
         let geo = NotchGeometry(
-            notchRect: NSRect(x: 700, y: 968, width: 200, height: 32),
+            notchRect: notch,
             activationZone: NSRect(x: 670, y: 908, width: 260, height: 102),
             screenFrame: screen,
             hasNotch: true
@@ -252,7 +253,20 @@ struct NotchGeometryTests {
         #expect(rect.width == screen.width * 0.5)
         #expect(rect.height == 200)
         #expect(rect.midX == screen.midX)
-        #expect(rect.maxY == screen.maxY)
+        #expect(rect.maxY == notch.minY)  // top of hover rect aligns with bottom of notch
+    }
+
+    @Test
+    func hoverTriggerRectOnScreenWithoutNotch() {
+        let screen = NSRect(x: 0, y: 0, width: 1600, height: 1000)
+        let geo = NotchGeometry(
+            notchRect: nil,
+            activationZone: NSRect(x: 770, y: 950, width: 60, height: 25),
+            screenFrame: screen,
+            hasNotch: false
+        )
+        let rect = geo.hoverTriggerRect
+        #expect(rect.maxY == screen.maxY - 24)
     }
 
     @Test

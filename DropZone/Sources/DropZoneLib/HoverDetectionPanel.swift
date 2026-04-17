@@ -25,7 +25,8 @@ public final class HoverDetectionPanel: NSPanel {
             defer: false
         )
         isFloatingPanel = true
-        level = .screenSaver  // Above .popUpMenu used by DropZonePanel — prevents flicker
+        level = .popUpMenu
+        isReleasedWhenClosed = false
         collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary]
         isOpaque = false
         backgroundColor = .clear
