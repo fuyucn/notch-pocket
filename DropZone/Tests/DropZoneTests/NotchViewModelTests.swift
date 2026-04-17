@@ -67,4 +67,24 @@ struct NotchViewModelTests {
         vm.forceClose()
         #expect(vm.status == .closed)
     }
+
+    @Test @MainActor
+    func markDroppedKeepsStatusOpenedEvenWithoutDrag() {
+        let vm = makeVM()
+        vm.markDropped(stickyFor: 1.0)
+        #expect(vm.status == .opened)
+        // Simulate cursor moving far away without drag; status should stay .opened.
+        vm.updateMouseLocation(NSPoint(x: -500, y: -500), isDragging: false)
+        #expect(vm.status == .opened)
+    }
+
+    @Test @MainActor
+    func markDroppedWithZeroStickinessImmediatelyExpires() {
+        let vm = makeVM()
+        vm.markDropped(stickyFor: 0)
+        // We're .opened right after markDropped but the deadline has already passed.
+        // Next updateMouseLocation should fall through to normal gating.
+        vm.updateMouseLocation(NSPoint(x: -500, y: -500), isDragging: false)
+        #expect(vm.status == .closed)
+    }
 }

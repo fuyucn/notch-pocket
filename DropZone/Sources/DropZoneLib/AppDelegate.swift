@@ -50,6 +50,7 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
             if !added.isEmpty {
                 vm?.primaryFileName = nil
                 vm?.extraCount = 0
+                vm?.markDropped()
                 return true
             }
             return false
@@ -79,6 +80,11 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
         let settingsWindow = SettingsWindowController(settingsManager: settings)
         settingsWindowController = settingsWindow
         controller.onShowSettings = { [weak settingsWindow] in settingsWindow?.showSettings() }
+        controller.onShowShelf = { [weak vm] in
+            guard let vm else { return }
+            vm.status = .opened
+            vm.markDropped(stickyFor: 4)   // give user a moment to interact
+        }
 
         settings.onSettingsChanged = { [weak shelfManager] in
             guard let shelfManager else { return }
