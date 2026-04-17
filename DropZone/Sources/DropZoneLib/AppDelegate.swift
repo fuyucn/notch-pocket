@@ -9,6 +9,7 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
     private(set) public var settingsManager: SettingsManager?
     private(set) public var settingsWindowController: SettingsWindowController?
     private(set) public var keyboardShortcutManager: KeyboardShortcutManager?
+    private(set) public var hoverDetectionPanel: HoverDetectionPanel?
 
     /// Timer to auto-hide the shelf after mouse leaves.
     private var hideShelfTimer: Timer?
@@ -39,6 +40,12 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
         // Set up screen detection and panel
         let detector = ScreenDetector()
         let panel = DropZonePanel(geometry: detector.currentGeometry)
+
+        // Transparent detection panel for hover-driven pre-activation.
+        // See docs/superpowers/specs/2026-04-17-hover-detection-panel.md
+        let hoverPanel = HoverDetectionPanel(geometry: detector.currentGeometry)
+        hoverDetectionPanel = hoverPanel
+        hoverPanel.hoverDelegate = self
 
         // Set up global drag monitor
         let monitor = GlobalDragMonitor(geometry: detector.currentGeometry)
@@ -92,10 +99,11 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
             panel.updateBadge(count: manager.items.count)
         }
 
-        // Screen changes → update geometry for panel and drag monitor
-        detector.onScreenChange = { [weak panel, weak monitor] newGeometry in
+        // Screen changes → update geometry for panel, drag monitor, and hover panel
+        detector.onScreenChange = { [weak self, weak panel, weak monitor] newGeometry in
             panel?.geometry = newGeometry
             monitor?.geometry = newGeometry
+            self?.hoverDetectionPanel?.updateGeometry(newGeometry)
         }
         detector.startObserving()
 
@@ -143,6 +151,9 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
     public func applicationWillTerminate(_ notification: Notification) {
         keyboardShortcutManager?.unregister()
         keyboardShortcutManager = nil
+
+        hoverDetectionPanel?.orderOut(nil)
+        hoverDetectionPanel = nil
 
         settingsWindowController?.closeSettings()
         settingsWindowController = nil
@@ -284,5 +295,33 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
     private func cancelHideShelfTimer() {
         hideShelfTimer?.invalidate()
         hideShelfTimer = nil
+    }
+}
+
+// MARK: - HoverDetectionDelegate
+
+extension AppDelegate: HoverDetectionDelegate {
+    public func hoverEntered() {
+        guard let panel = self.dropZonePanel else { return }
+        guard let shelfManager = self.fileShelfManager else { return }
+        // Only pre-activate when the main panel is idle.
+        if panel.panelState == .hidden || panel.panelState == .listening || panel.panelState == .preActivated {
+            // Nudge into listening first if needed, then show the bar.
+            if panel.panelState == .hidden {
+                panel.enterListening()
+            }
+            panel.enterPreActivation(
+                primaryFileName: nil,
+                extraCount: 0,
+                shelfCount: shelfManager.items.count
+            )
+        }
+    }
+
+    public func hoverExited() {
+        guard let panel = self.dropZonePanel else { return }
+        if panel.panelState == .preActivated {
+            panel.exitPreActivation()
+        }
     }
 }
