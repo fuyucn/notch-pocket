@@ -57,11 +57,35 @@ public final class NotchPanel: NSPanel {
         setFrame(rect, display: false)
         orderFrontRegardless()
 
-        // Observe status to toggle click-through
+        // Observe status to toggle click-through + make-key for click-outside-to-close
         viewModel.$status
             .receive(on: DispatchQueue.main)
-            .sink { [weak self] _ in self?.syncIgnoresMouseEvents() }
+            .sink { [weak self] status in
+                guard let self else { return }
+                self.syncIgnoresMouseEvents()
+                if status == .opened {
+                    self.makeKey()
+                } else if self.isKeyWindow {
+                    self.resignKey()
+                }
+            }
             .store(in: &cancellables)
+
+        // When the user clicks outside the panel, the panel loses key status
+        // and we dismiss the opened shelf. `.closed` and `.popping` never hold
+        // key so this only fires on opened → click-outside.
+        NotificationCenter.default.addObserver(
+            forName: NSWindow.didResignKeyNotification,
+            object: self,
+            queue: .main
+        ) { [weak self] _ in
+            MainActor.assumeIsolated {
+                guard let self else { return }
+                if self.viewModel.status == .opened {
+                    self.viewModel.forceClose()
+                }
+            }
+        }
 
         // Observe mouse location from EventMonitors
         EventMonitors.shared.mouseLocation
@@ -74,7 +98,9 @@ public final class NotchPanel: NSPanel {
             .store(in: &cancellables)
     }
 
-    override public var canBecomeKey: Bool { false }
+    // Only allow key-status when the shelf is opened; otherwise the panel
+    // stays non-key and non-activating (no focus stealing while idle).
+    override public var canBecomeKey: Bool { viewModel.status == .opened }
     override public var canBecomeMain: Bool { false }
 
     /// Sync `ignoresMouseEvents` with current viewModel status.

@@ -79,12 +79,14 @@ struct NotchViewModelTests {
     }
 
     @Test @MainActor
-    func markDroppedWithZeroStickinessImmediatelyExpires() {
+    func openedStaysOpenedUntilExplicitClose() {
         let vm = makeVM()
-        vm.markDropped(stickyFor: 0)
-        // We're .opened right after markDropped but the deadline has already passed.
-        // Next updateMouseLocation should fall through to normal gating.
+        vm.markDropped()
+        #expect(vm.status == .opened)
+        // Mouse leaves everything — shelf must stay open until forceClose().
         vm.updateMouseLocation(NSPoint(x: -500, y: -500), isDragging: false)
+        #expect(vm.status == .opened)
+        vm.forceClose()
         #expect(vm.status == .closed)
     }
 

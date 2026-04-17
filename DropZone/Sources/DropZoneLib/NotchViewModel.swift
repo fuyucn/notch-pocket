@@ -34,18 +34,21 @@ public final class NotchViewModel: ObservableObject {
         self.geometry = geometry
     }
 
-    public func markDropped(stickyFor seconds: TimeInterval = 2.5) {
+    /// Open the shelf. Stays open until `forceClose()` is called (close button,
+    /// click-outside, Esc). The `stickyFor` parameter is accepted for source
+    /// compatibility but ignored — opened state no longer auto-dismisses.
+    public func markDropped(stickyFor seconds: TimeInterval = 0) {
+        _ = seconds
         status = .opened
-        openStickyUntil = Date().addingTimeInterval(seconds)
+        openStickyUntil = nil
     }
 
     /// Drive the status from a pointer location + drag flag.
+    /// When already `.opened`, this is a no-op — the shelf is explicitly
+    /// dismissed via `forceClose()`.
     public func updateMouseLocation(_ point: NSPoint, isDragging: Bool) {
-        if let deadline = openStickyUntil, Date() < deadline {
-            if status != .opened { status = .opened }
+        if status == .opened {
             return
-        } else if openStickyUntil != nil {
-            openStickyUntil = nil  // expired, resume normal logic
         }
         guard isDragging else {
             if status != .closed { status = .closed }
@@ -62,5 +65,6 @@ public final class NotchViewModel: ObservableObject {
 
     public func forceClose() {
         status = .closed
+        openStickyUntil = nil
     }
 }
