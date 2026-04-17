@@ -242,16 +242,17 @@ public final class FileShelfManager {
         let fileName = sourceURL.lastPathComponent
         let destURL = itemDir.appendingPathComponent(fileName)
 
-        // Try hard-link first (same volume, no extra disk usage), fall back to copy
+        // Always copy (not hard-link). Hard-links share an inode with the
+        // source, which causes Finder to produce NSFileWriteUnknownError
+        // (-8058) when the user later drags the shelf copy out (the OS
+        // tries to rename/unlink an inode it can't reason about across
+        // volumes). A plain copy makes the shelf item a truly independent
+        // file that Finder can freely move.
         do {
-            try fileManager.linkItem(at: sourceURL, to: destURL)
+            try fileManager.copyItem(at: sourceURL, to: destURL)
         } catch {
-            do {
-                try fileManager.copyItem(at: sourceURL, to: destURL)
-            } catch {
-                try? fileManager.removeItem(at: itemDir)
-                return nil
-            }
+            try? fileManager.removeItem(at: itemDir)
+            return nil
         }
 
         // Get file size
