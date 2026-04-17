@@ -16,6 +16,14 @@ public final class NotchViewModel: ObservableObject {
     /// True when a file drag is currently inside the panel's drop forwarder —
     /// used to highlight the drop target (dashed border, fill) in the opened UI.
     @Published public var isDragInside: Bool = false
+    /// AirDrop button frame in global screen coordinates, reported by SwiftUI
+    /// via GeometryReader. `nil` when the button isn't on screen. Used by
+    /// `NotchDropForwarder` to steer drops on the AirDrop region to AirDrop
+    /// instead of the shelf.
+    public var airDropRectInPanel: NSRect?
+    /// True while the drag cursor is inside `airDropRectInPanel`. Published
+    /// so the AirDrop button can highlight.
+    @Published public var isDragOverAirDrop: Bool = false
     /// Incremented whenever the shelf content changes, so SwiftUI consumers can
     /// re-bind their NSViewRepresentable to pick up manager state.
     @Published public var shelfRefreshToken: Int = 0

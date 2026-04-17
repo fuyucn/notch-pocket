@@ -46,6 +46,24 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
             vm.isDragInside = inside
             vm.primaryFileName = inside ? names.first : nil
             vm.extraCount = inside ? max(0, names.count - 1) : 0
+            if !inside { vm.isDragOverAirDrop = false }
+        }
+        panel.dropForwarder?.onDragMoved = { [weak vm] pointInView in
+            guard let vm else { return }
+            if let rect = vm.airDropRectInPanel {
+                vm.isDragOverAirDrop = rect.contains(pointInView)
+            } else {
+                vm.isDragOverAirDrop = false
+            }
+        }
+        panel.dropForwarder?.airDropRectProvider = { [weak vm] in
+            vm?.airDropRectInPanel
+        }
+        panel.dropForwarder?.onDropOnAirDrop = { [weak vm] urls in
+            vm?.isDragInside = false
+            vm?.isDragOverAirDrop = false
+            AirDropService.share(urls: urls)
+            return true
         }
         panel.dropForwarder?.onDropFiles = { [weak shelfManager, weak vm] urls, appName in
             guard let shelfManager else { return false }
@@ -54,6 +72,7 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
                 vm?.isDragInside = false
                 vm?.primaryFileName = nil
                 vm?.extraCount = 0
+                vm?.isDragOverAirDrop = false
                 vm?.markDropped()
                 return true
             }

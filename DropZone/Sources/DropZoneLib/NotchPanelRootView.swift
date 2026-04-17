@@ -188,11 +188,16 @@ public struct NotchPanelRootView: View {
             let urls = shelfManager.items.map { $0.shelfURL }
             AirDropActionView(
                 isEnabled: true,  // always accept drag-to-airdrop; tap only active when shelf non-empty
+                isDropTargeted: viewModel.isDragOverAirDrop,
                 onTap: {
                     if !urls.isEmpty { AirDropService.share(urls: urls) }
                 },
-                onDropFiles: { droppedURLs in
-                    AirDropService.share(urls: droppedURLs)
+                onFrameChange: { [weak vm = viewModel] rect in
+                    // rect is in global screen coords; convert to the panel's
+                    // content-view coords (panel is top-anchored so Y flips).
+                    // We store raw global rect; forwarder will convert drop
+                    // points to global coords to compare.
+                    vm?.airDropRectInPanel = rect
                 }
             )
             switch mode {
