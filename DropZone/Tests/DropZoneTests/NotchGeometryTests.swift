@@ -245,17 +245,17 @@ struct NotchGeometryTests {
     }
 
     @Test
-    func preActivationRectIsActivationZoneOutsetBy8Px() {
+    func preActivationRectIsActivationZoneOutsetByPreActivationOutset() {
         let screen = NSRect(x: 0, y: 0, width: 1000, height: 800)
         let notch = NSRect(x: 400, y: 768, width: 200, height: 32)
         let activation = NSRect(x: 370, y: 708, width: 260, height: 102)
         let geo = NotchGeometry(notchRect: notch, activationZone: activation, screenFrame: screen, hasNotch: true)
 
         let pre = geo.preActivationRect
-        #expect(pre.minX == activation.minX - 8)
-        #expect(pre.minY == activation.minY - 8)
-        #expect(pre.width == activation.width + 16)
-        #expect(pre.height == activation.height + 16)
+        #expect(pre.minX == activation.minX - NotchGeometry.preActivationOutset)
+        #expect(pre.minY == activation.minY - NotchGeometry.preActivationOutset)
+        #expect(pre.width == activation.width + NotchGeometry.preActivationOutset * 2)
+        #expect(pre.height == activation.height + NotchGeometry.preActivationOutset * 2)
     }
 
     @Test

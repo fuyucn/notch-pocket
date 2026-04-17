@@ -287,15 +287,18 @@ struct SettingsManagerTests {
 
     @Test @MainActor
     func shelfViewModeDefaultsToList() {
-        let defaults = UserDefaults(suiteName: "test.shelfViewMode.\(UUID())")!
-        defer { defaults.removePersistentDomain(forName: defaults.dictionaryRepresentation().keys.first ?? "") }
+        let suite = "test.shelfViewMode.\(UUID())"
+        let defaults = UserDefaults(suiteName: suite)!
+        defer { defaults.removePersistentDomain(forName: suite) }
         let settings = SettingsManager(defaults: defaults)
         #expect(settings.shelfViewMode == .list)
     }
 
     @Test @MainActor
     func shelfViewModeRoundTrip() {
-        let defaults = UserDefaults(suiteName: "test.shelfViewMode.rt.\(UUID())")!
+        let suite = "test.shelfViewMode.rt.\(UUID())"
+        let defaults = UserDefaults(suiteName: suite)!
+        defer { defaults.removePersistentDomain(forName: suite) }
         let settings = SettingsManager(defaults: defaults)
         settings.shelfViewMode = .thumbnail
         #expect(settings.shelfViewMode == .thumbnail)
@@ -305,14 +308,18 @@ struct SettingsManagerTests {
 
     @Test @MainActor
     func shelfPersistenceDefaultsToPersistent() {
-        let defaults = UserDefaults(suiteName: "test.shelfPersistence.\(UUID())")!
+        let suite = "test.shelfPersistence.\(UUID())"
+        let defaults = UserDefaults(suiteName: suite)!
+        defer { defaults.removePersistentDomain(forName: suite) }
         let settings = SettingsManager(defaults: defaults)
         #expect(settings.shelfPersistence == .persistent)
     }
 
     @Test @MainActor
     func shelfPersistenceRoundTrip() {
-        let defaults = UserDefaults(suiteName: "test.shelfPersistence.rt.\(UUID())")!
+        let suite = "test.shelfPersistence.rt.\(UUID())"
+        let defaults = UserDefaults(suiteName: suite)!
+        defer { defaults.removePersistentDomain(forName: suite) }
         let settings = SettingsManager(defaults: defaults)
         settings.shelfPersistence = .autoDismiss
         #expect(settings.shelfPersistence == .autoDismiss)
