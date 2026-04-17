@@ -39,6 +39,7 @@ struct NotchPanelTests {
         let geo = makeGeometry()
         let vm = NotchViewModel(geometry: geo)
         let panel = NotchPanel(viewModel: vm)
+        vm.isFileDragging = true
         vm.updateMouseLocation(NSPoint(x: 800, y: 950), isDragging: true)
         panel.syncIgnoresMouseEvents()
         #expect(panel.ignoresMouseEvents == false)

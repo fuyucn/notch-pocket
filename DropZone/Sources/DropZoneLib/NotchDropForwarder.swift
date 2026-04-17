@@ -19,7 +19,6 @@ public final class NotchDropForwarder: NSView {
 
     public override func draggingEntered(_ sender: any NSDraggingInfo) -> NSDragOperation {
         guard Self.pasteboardHasFileURLs(sender.draggingPasteboard) else {
-            // Not a file drag — ignore, don't show pre-activation UI.
             return []
         }
         let names = Self.readFileNames(from: sender.draggingPasteboard)
