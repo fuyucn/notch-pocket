@@ -346,8 +346,8 @@ struct FileShelfManagerTests {
 
     // MARK: - Additional edge cases
 
-    @Test("Adding same file twice creates two distinct shelf items")
-    func addSameFileTwice() throws {
+    @Test("Adding same file twice is a no-op the second time")
+    func addSameFileTwiceIsDeduplicated() throws {
         let sourceDir = try makeTempDirectory()
         let (manager, shelfDir) = try makeManager()
         let fileURL = try makeTestFile(in: sourceDir, name: "dup.txt", content: "data")
@@ -355,11 +355,8 @@ struct FileShelfManagerTests {
         let first = manager.addFiles(from: [fileURL])
         let second = manager.addFiles(from: [fileURL])
         #expect(first.count == 1)
-        #expect(second.count == 1)
-        #expect(manager.items.count == 2)
-        // They should have different IDs and different shelf paths
-        #expect(first[0].id != second[0].id)
-        #expect(first[0].shelfURL != second[0].shelfURL)
+        #expect(second.count == 0)
+        #expect(manager.items.count == 1)
 
         try? FileManager.default.removeItem(at: sourceDir)
         try? FileManager.default.removeItem(at: shelfDir)

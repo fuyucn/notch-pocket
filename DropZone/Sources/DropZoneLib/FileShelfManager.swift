@@ -104,6 +104,15 @@ public final class FileShelfManager {
         var added: [ShelfItem] = []
 
         for url in urls {
+            // Skip duplicates — an identical source path is already on the
+            // shelf. Resolve symlinks first so /private/var and /var etc.
+            // collapse to a single canonical path before comparing.
+            let canonical = url.resolvingSymlinksInPath().standardizedFileURL
+            let alreadyShelved = items.contains { existing in
+                existing.originalURL.resolvingSymlinksInPath().standardizedFileURL == canonical
+            }
+            if alreadyShelved { continue }
+
             // Enforce max items — remove oldest if needed
             if items.count >= maxItems, let oldest = items.first {
                 removeItem(oldest.id)
