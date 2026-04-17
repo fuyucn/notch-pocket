@@ -86,6 +86,8 @@ private struct ShelfGridCell: View {
     @State private var isHovering = false
 
     var body: some View {
+        // .onDrag must be the outermost interaction — SwiftUI prefers
+        // gesture/tap handlers if they're on the same view.
         VStack(spacing: 6) {
             ZStack(alignment: .topTrailing) {
                 RoundedRectangle(cornerRadius: 8, style: .continuous)
@@ -120,13 +122,12 @@ private struct ShelfGridCell: View {
         .onHover { hovering in
             withAnimation(.easeInOut(duration: 0.12)) { isHovering = hovering }
         }
+        .onDrag {
+            NSItemProvider(contentsOf: item.shelfURL) ?? NSItemProvider(object: item.shelfURL as NSURL)
+        }
         .contextMenu {
             Button("Open") { onOpen() }
             Button("Remove", role: .destructive) { onRemove() }
-        }
-        .onTapGesture(count: 2) { onOpen() }
-        .onDrag {
-            NSItemProvider(contentsOf: item.shelfURL) ?? NSItemProvider(object: item.shelfURL as NSURL)
         }
     }
 

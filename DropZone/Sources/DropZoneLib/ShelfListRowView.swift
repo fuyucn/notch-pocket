@@ -77,13 +77,12 @@ public struct ShelfListRowView: View {
         .onHover { hovering in
             withAnimation(.easeInOut(duration: 0.12)) { isHovering = hovering }
         }
+        .onDrag {
+            NSItemProvider(contentsOf: item.shelfURL) ?? NSItemProvider(object: item.shelfURL as NSURL)
+        }
         .contextMenu {
             Button("Open") { onOpen() }
             Button("Remove", role: .destructive) { onRemove() }
-        }
-        .onTapGesture(count: 2) { onOpen() }
-        .onDrag {
-            NSItemProvider(contentsOf: item.shelfURL) ?? NSItemProvider(object: item.shelfURL as NSURL)
         }
     }
 
