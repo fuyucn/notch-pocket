@@ -169,7 +169,7 @@ public struct NotchPanelRootView: View {
             VStack(spacing: 0) {
                 notchTopBar
                 contentBody(shelfManager: shelfManager, mode: mode)
-                    .padding(.horizontal, 28)
+                    .padding(.horizontal, 12)
                     .padding(.top, 16)
                     .padding(.bottom, 18)
             }
