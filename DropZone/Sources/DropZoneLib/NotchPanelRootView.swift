@@ -8,54 +8,73 @@ public struct NotchPanelRootView: View {
         self.viewModel = viewModel
     }
 
+    private var targetSize: CGSize {
+        switch viewModel.status {
+        case .closed:
+            // Collapsed — approximate notch dimensions for a neat tucked pill.
+            let w = viewModel.geometry.notchRect?.width ?? 200
+            let h = (viewModel.geometry.notchRect?.height ?? 32) + 4
+            return CGSize(width: w + 8, height: h)
+        case .popping:
+            let s = viewModel.geometry.preActivatedPanelSize
+            return CGSize(width: s.width, height: s.height)
+        case .opened:
+            let s = viewModel.geometry.openedPanelSize
+            return CGSize(width: s.width, height: s.height)
+        }
+    }
+
+    private var targetTopRadius: CGFloat {
+        switch viewModel.status {
+        case .closed: return NotchShape.closedTopRadius
+        case .popping, .opened: return NotchShape.openedTopRadius
+        }
+    }
+
+    private var targetBottomRadius: CGFloat {
+        switch viewModel.status {
+        case .closed: return NotchShape.closedBottomRadius
+        case .popping, .opened: return NotchShape.openedBottomRadius
+        }
+    }
+
     public var body: some View {
         ZStack {
-            switch viewModel.status {
-            case .closed:
-                Color.clear
-            case .popping:
-                poppingContent
-                    .transition(.opacity.combined(with: .scale(scale: 0.95, anchor: .top)))
-            case .opened:
-                openedContent
-                    .transition(.opacity.combined(with: .scale(scale: 0.95, anchor: .top)))
-            }
+            // Content
+            content
         }
-        .animation(.easeOut(duration: 0.22), value: viewModel.status)
-        // Top-align so the sub-pills sit flush to the screen top and visually wrap the notch.
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-    }
-
-    @ViewBuilder
-    private var poppingContent: some View {
-        let size = viewModel.geometry.preActivatedPanelSize
-        PreActivationBarView(
-            primaryFileName: viewModel.primaryFileName,
-            extraCount: viewModel.extraCount,
-            shelfCount: viewModel.shelfCount
-        )
-        .frame(width: size.width, height: size.height)
+        .frame(width: targetSize.width, height: targetSize.height)
         .background(
-            RoundedRectangle(cornerRadius: 28, style: .continuous)
-                .fill(Color.black.opacity(0.88))
+            NotchShape(topCornerRadius: targetTopRadius, bottomCornerRadius: targetBottomRadius)
+                .fill(Color.black)
         )
         .overlay(
-            RoundedRectangle(cornerRadius: 28, style: .continuous)
-                .strokeBorder(Color.white.opacity(0.15), lineWidth: 0.5)
+            NotchShape(topCornerRadius: targetTopRadius, bottomCornerRadius: targetBottomRadius)
+                .stroke(Color.white.opacity(0.15), lineWidth: 0.5)
         )
-        .shadow(color: .black.opacity(0.35), radius: 12, y: 4)
+        .shadow(color: .black.opacity(0.45), radius: 14, y: 6)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        .animation(.spring(response: 0.42, dampingFraction: 0.82), value: viewModel.status)
     }
 
     @ViewBuilder
-    private var openedContent: some View {
-        let size = viewModel.geometry.openedPanelSize
-        Group {
+    private var content: some View {
+        switch viewModel.status {
+        case .closed:
+            Color.clear
+        case .popping:
+            PreActivationBarView(
+                primaryFileName: viewModel.primaryFileName,
+                extraCount: viewModel.extraCount,
+                shelfCount: viewModel.shelfCount
+            )
+        case .opened:
             if let shelfManager = viewModel.shelfManager {
                 ShelfContainerView(
                     shelfManager: shelfManager,
                     refreshToken: viewModel.shelfRefreshToken
                 )
-                .padding(.top, 40)   // leave room for the notch
+                .padding(.top, 40)
                 .padding(.horizontal, 12)
                 .padding(.bottom, 12)
             } else {
@@ -63,15 +82,5 @@ public struct NotchPanelRootView: View {
                     .foregroundStyle(.white.opacity(0.6))
             }
         }
-        .frame(width: size.width, height: size.height)
-        .background(
-            RoundedRectangle(cornerRadius: 28, style: .continuous)
-                .fill(Color.black.opacity(0.92))
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 28, style: .continuous)
-                .strokeBorder(Color.white.opacity(0.15), lineWidth: 0.5)
-        )
-        .shadow(color: .black.opacity(0.45), radius: 14, y: 6)
     }
 }
