@@ -187,8 +187,13 @@ public struct NotchPanelRootView: View {
         HStack(spacing: 14) {
             let urls = shelfManager.items.map { $0.shelfURL }
             AirDropActionView(
-                isEnabled: !urls.isEmpty,
-                onTap: { AirDropService.share(urls: urls) }
+                isEnabled: true,  // always accept drag-to-airdrop; tap only active when shelf non-empty
+                onTap: {
+                    if !urls.isEmpty { AirDropService.share(urls: urls) }
+                },
+                onDropFiles: { droppedURLs in
+                    AirDropService.share(urls: droppedURLs)
+                }
             )
             switch mode {
             case .thumbnail:
