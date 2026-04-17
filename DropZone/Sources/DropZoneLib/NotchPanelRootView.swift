@@ -1,4 +1,5 @@
 import SwiftUI
+import AppKit
 
 @MainActor
 public struct NotchPanelRootView: View {
@@ -67,18 +68,50 @@ public struct NotchPanelRootView: View {
                 shelfCount: viewModel.shelfCount
             )
         case .opened:
-            if let shelfManager = viewModel.shelfManager {
-                ShelfContainerView(
-                    shelfManager: shelfManager,
-                    refreshToken: viewModel.shelfRefreshToken
+            openedContent
+        }
+    }
+
+    @ViewBuilder
+    private var openedContent: some View {
+        if let shelfManager = viewModel.shelfManager {
+            let mode = viewModel.settingsManager?.shelfViewMode ?? .list
+            VStack(spacing: 0) {
+                Spacer().frame(height: 36) // below notch cutout
+                ShelfHeaderView(
+                    itemCount: shelfManager.items.count,
+                    viewMode: mode,
+                    onToggleView: { [weak vm = viewModel] in
+                        guard let vm, let settings = vm.settingsManager else { return }
+                        settings.shelfViewMode = (settings.shelfViewMode == .list) ? .thumbnail : .list
+                        vm.shelfRefreshToken &+= 1  // force SwiftUI re-read
+                    },
+                    onMinimize: { [weak vm = viewModel] in
+                        vm?.forceClose()
+                    }
                 )
-                .padding(.top, 40)
-                .padding(.horizontal, 12)
-                .padding(.bottom, 12)
-            } else {
-                Text("Shelf unavailable")
-                    .foregroundStyle(.white.opacity(0.6))
+                Divider().background(Color.white.opacity(0.08))
+                Group {
+                    if mode == .list {
+                        ShelfListView(
+                            items: shelfManager.items,
+                            onOpen: { item in NSWorkspace.shared.open(item.shelfURL) },
+                            onRemove: { [weak shelfManager] id in shelfManager?.removeItem(id) }
+                        )
+                    } else {
+                        ShelfContainerView(
+                            shelfManager: shelfManager,
+                            refreshToken: viewModel.shelfRefreshToken
+                        )
+                    }
+                }
+                .padding(.horizontal, 8)
+                .padding(.bottom, 8)
             }
+            .id(viewModel.shelfRefreshToken) // cache-bust the whole sub-tree
+        } else {
+            Text("Shelf unavailable")
+                .foregroundStyle(.white.opacity(0.6))
         }
     }
 }

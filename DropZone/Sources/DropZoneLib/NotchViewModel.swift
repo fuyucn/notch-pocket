@@ -23,6 +23,9 @@ public final class NotchViewModel: ObservableObject {
     /// SwiftUI to bind `ShelfContainerView` in the opened state.
     public weak var shelfManager: FileShelfManager?
 
+    /// Weak reference to the app's settings manager. Set by AppDelegate.
+    public weak var settingsManager: SettingsManager?
+
     /// When non-nil, `updateMouseLocation` ignores the drag gate and keeps `.opened`
     /// until this deadline passes.
     private var openStickyUntil: Date?
