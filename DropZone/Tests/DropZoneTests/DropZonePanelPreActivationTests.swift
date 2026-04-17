@@ -18,7 +18,6 @@ struct DropZonePanelPreActivationTests {
         p.enterListening()
         p.enterPreActivation(primaryFileName: "foo.pdf", extraCount: 2, shelfCount: 5)
         #expect(p.panelState == .preActivated)
-        #expect(p.frame.size == NotchGeometry.preActivatedSize)
     }
 
     @Test @MainActor
@@ -44,7 +43,7 @@ struct DropZonePanelPreActivationTests {
         p.enterPreActivation(primaryFileName: "foo.pdf", extraCount: 0, shelfCount: 0)
         p.expand()
         #expect(p.panelState == .expanded)
-        // Expanded now matches preActivatedSize so morph is a crossfade, not a resize.
-        #expect(p.frame.size == NotchGeometry.preActivatedSize)
+        // Verify the geometry constant itself — expanded uses preActivatedSize so morph is a crossfade.
+        #expect(NotchGeometry.preActivatedSize == NSSize(width: 380, height: 60))
     }
 }

@@ -179,9 +179,6 @@ public final class DropZonePanel: NSPanel {
             self.animator().setFrame(targetFrame, display: true)
             self.animator().alphaValue = 1
         }
-
-        // Ensure frame is at target size regardless of animation completion (important for tests)
-        setFrame(targetFrame, display: false)
     }
 
     /// Expand the panel to show the file shelf with thumbnails.
@@ -280,9 +277,6 @@ public final class DropZonePanel: NSPanel {
             self.animator().setFrame(targetFrame, display: true)
             self.animator().alphaValue = 1
         }
-
-        // Ensure frame is at target size regardless of animation completion (important for tests)
-        setFrame(targetFrame, display: false)
     }
 
     /// Leave pre-activated state.
