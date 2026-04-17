@@ -39,12 +39,13 @@ public final class DragDestinationView: NSView {
 
     /// Apple's private pasteboard type that carries the source app's bundle identifier
     /// during drag-and-drop. Present for most AppKit-based drag sources (Finder, Safari, Preview…).
-    public static let sourceAppBundleIDType =
+    static let sourceAppBundleIDType =
         NSPasteboard.PasteboardType("com.apple.pasteboard.source-app-bundle-identifier")
 
     /// Resolve a bundle identifier to the app's display name via NSWorkspace + Bundle.
-    /// Returns nil if the bundle ID is unknown or the Info.plist has no `CFBundleName`.
-    public static func sourceAppName(forBundleID bundleID: String) -> String? {
+    /// Returns nil if the bundle ID is unknown, the bundle cannot be read, or both
+    /// `CFBundleName` and `CFBundleDisplayName` are missing.
+    static func sourceAppName(forBundleID bundleID: String) -> String? {
         guard let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleID) else {
             return nil
         }
