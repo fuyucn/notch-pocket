@@ -14,11 +14,16 @@ struct NotchPanelTests {
     }
 
     @Test @MainActor
-    func frameCoversHoverTriggerRect() {
+    func frameIsTopAnchoredAndTallEnoughForOpenedContent() {
         let geo = makeGeometry()
         let vm = NotchViewModel(geometry: geo)
         let panel = NotchPanel(viewModel: vm)
-        #expect(panel.frame == geo.hoverTriggerRect)
+        // Width matches hoverTriggerRect; height is expanded so opened-state
+        // SwiftUI content fits inside the NSHostingView without clipping.
+        #expect(panel.frame.width == geo.hoverTriggerRect.width)
+        #expect(panel.frame.origin.x == geo.hoverTriggerRect.origin.x)
+        #expect(panel.frame.maxY == geo.screenFrame.maxY)
+        #expect(panel.frame.height >= geo.openedPanelSize.height)
     }
 
     @Test @MainActor
@@ -51,6 +56,9 @@ struct NotchPanelTests {
             hasNotch: true
         )
         panel.updateGeometry(newGeo)
-        #expect(panel.frame == newGeo.hoverTriggerRect)
+        #expect(panel.frame.width == newGeo.hoverTriggerRect.width)
+        #expect(panel.frame.origin.x == newGeo.hoverTriggerRect.origin.x)
+        #expect(panel.frame.maxY == newGeo.screenFrame.maxY)
+        #expect(panel.frame.height >= newGeo.openedPanelSize.height)
     }
 }

@@ -11,7 +11,12 @@ public final class NotchPanel: NSPanel {
     public init(viewModel: NotchViewModel) {
         self.viewModel = viewModel
 
-        let rect = viewModel.geometry.hoverTriggerRect
+        // Window container must be tall enough for the largest UI state
+        // (opened shelf) plus shadow margin. hoverTriggerRect is only 200pt
+        // tall which is enough for click/drag detection but NOT enough to
+        // contain the opened shelf SwiftUI tree — content would draw outside
+        // the NSHostingView frame.
+        let rect = Self.containerFrame(for: viewModel.geometry)
         super.init(
             contentRect: rect,
             styleMask: [.nonactivatingPanel, .borderless, .fullSizeContentView],
@@ -81,6 +86,20 @@ public final class NotchPanel: NSPanel {
 
     public func updateGeometry(_ geometry: NotchGeometry) {
         viewModel.geometry = geometry
-        setFrame(geometry.hoverTriggerRect, display: true)
+        setFrame(Self.containerFrame(for: geometry), display: true)
+    }
+
+    /// Window rect that comfortably contains every state (closed, popping,
+    /// opened) plus shadow/animation room. Top-anchored to screen, width
+    /// matches hoverTriggerRect (which is the drag-detection area).
+    private static func containerFrame(for geometry: NotchGeometry) -> NSRect {
+        let hover = geometry.hoverTriggerRect
+        let neededHeight = max(hover.height, geometry.openedPanelSize.height + 60)
+        return NSRect(
+            x: hover.origin.x,
+            y: geometry.screenFrame.maxY - neededHeight,
+            width: hover.width,
+            height: neededHeight
+        )
     }
 }
