@@ -17,9 +17,24 @@ public struct PreActivationBarView: View {
     }
 
     public var body: some View {
-        Text(primaryFileName ?? "Dragging…")
-            .font(.system(size: 13, weight: .medium))
-            .foregroundStyle(.white)
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
+        VStack(spacing: 6) {
+            Image(systemName: "tray.and.arrow.down.fill")
+                .font(.system(size: 28, weight: .medium))
+                .foregroundStyle(.white.opacity(0.9))
+            Text("Drop here")
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundStyle(.white)
+            if let name = primaryFileName {
+                Text(name)
+                    .font(.system(size: 11))
+                    .foregroundStyle(.white.opacity(0.7))
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+                    .frame(maxWidth: 340)
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 10)
     }
 }

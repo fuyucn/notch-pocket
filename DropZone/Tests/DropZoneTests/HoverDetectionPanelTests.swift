@@ -14,11 +14,10 @@ struct HoverDetectionPanelTests {
     }
 
     @Test @MainActor
-    func frameOutsetsPreActivationRectBy20Px() {
+    func frameMatchesHoverTriggerRect() {
         let geo = makeGeometry()
         let panel = HoverDetectionPanel(geometry: geo)
-        let expected = geo.preActivationRect.insetBy(dx: -20, dy: -20)
-        #expect(panel.frame == expected)
+        #expect(panel.frame == geo.hoverTriggerRect)
     }
 
     @Test @MainActor
@@ -31,7 +30,7 @@ struct HoverDetectionPanelTests {
             hasNotch: true
         )
         panel.updateGeometry(newGeo)
-        #expect(panel.frame == newGeo.preActivationRect.insetBy(dx: -20, dy: -20))
+        #expect(panel.frame == newGeo.hoverTriggerRect)
     }
 
     @Test @MainActor

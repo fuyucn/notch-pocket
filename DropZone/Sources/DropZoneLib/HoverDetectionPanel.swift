@@ -8,7 +8,7 @@ public protocol HoverDetectionDelegate: AnyObject {
 }
 
 /// Invisible, click-through NSPanel pinned at notch top whose only job is to
-/// deliver `mouseEntered` / `mouseExited` to a delegate via NSTrackingArea.
+/// deliver drag-hover events to a delegate via NSDraggingDestination.
 /// No global event monitors — no TCC permission required.
 @MainActor
 public final class HoverDetectionPanel: NSPanel {
@@ -17,9 +17,7 @@ public final class HoverDetectionPanel: NSPanel {
     private let trackingView = HoverTrackingView()
 
     public init(geometry: NotchGeometry) {
-        // Use the pre-activation rect outset by 20px so the panel edges extend beyond the
-        // DropZonePanel boundary — prevents mouseExited firing when DropZonePanel overlaps.
-        let rect = geometry.preActivationRect.insetBy(dx: -20, dy: -20)
+        let rect = geometry.hoverTriggerRect
         super.init(
             contentRect: rect,
             styleMask: [.nonactivatingPanel, .borderless, .fullSizeContentView],
@@ -32,7 +30,7 @@ public final class HoverDetectionPanel: NSPanel {
         isOpaque = false
         backgroundColor = .clear
         hasShadow = false
-        ignoresMouseEvents = false // We need mouseEntered/mouseExited
+        ignoresMouseEvents = false // We need draggingEntered/draggingExited
         hidesOnDeactivate = false
         animationBehavior = .none
         titleVisibility = .hidden
@@ -41,12 +39,12 @@ public final class HoverDetectionPanel: NSPanel {
         trackingView.owner = self
         contentView = trackingView
 
-        setFrame(geometry.preActivationRect.insetBy(dx: -20, dy: -20), display: false)
+        setFrame(geometry.hoverTriggerRect, display: false)
         orderFrontRegardless()
     }
 
     public func updateGeometry(_ geometry: NotchGeometry) {
-        setFrame(geometry.preActivationRect.insetBy(dx: -20, dy: -20), display: true)
+        setFrame(geometry.hoverTriggerRect, display: true)
     }
 
     // Delegate invocation helpers called by the tracking view
@@ -57,54 +55,23 @@ public final class HoverDetectionPanel: NSPanel {
     override public var canBecomeKey: Bool { false }
     override public var canBecomeMain: Bool { false }
 
-    // Pass clicks through to what's underneath — we only care about hover.
-    override public func sendEvent(_ event: NSEvent) {
-        switch event.type {
-        case .mouseEntered, .mouseExited, .mouseMoved:
-            super.sendEvent(event)
-        default:
-            // Let clicks/scrolls flow to the windows below.
-            break
-        }
-    }
+    // Pass all events through to what's underneath — we only care about drag events.
+    // Drag events are handled by HoverTrackingView as NSDraggingDestination.
+    override public func sendEvent(_ event: NSEvent) { }
 }
 
 @MainActor
 private final class HoverTrackingView: NSView {
     weak var owner: HoverDetectionPanel?
-    private var trackingArea: NSTrackingArea?
 
     override func viewDidMoveToWindow() {
         super.viewDidMoveToWindow()
-        // Register as a drag destination so tracking fires during drag sessions.
-        // NSTrackingArea alone doesn't fire mouseEntered/mouseExited during a drag.
-        registerForDraggedTypes([
-            .fileURL,
-            NSPasteboard.PasteboardType("com.apple.NSFilePromiseItemMetaData")
-        ])
+        registerForDraggedTypes([.fileURL, NSPasteboard.PasteboardType("com.apple.NSFilePromiseItemMetaData")])
     }
-
-    override func updateTrackingAreas() {
-        super.updateTrackingAreas()
-        if let area = trackingArea { removeTrackingArea(area) }
-        let area = NSTrackingArea(
-            rect: bounds,
-            options: [.mouseEnteredAndExited, .activeAlways, .inVisibleRect, .assumeInside],
-            owner: self,
-            userInfo: nil
-        )
-        addTrackingArea(area)
-        trackingArea = area
-    }
-
-    override func mouseEntered(with event: NSEvent) { owner?.deliverEntered() }
-    override func mouseExited(with event: NSEvent) { owner?.deliverExited() }
-
-    // MARK: - NSDraggingDestination (drag-session hover detection)
 
     override func draggingEntered(_ sender: any NSDraggingInfo) -> NSDragOperation {
         owner?.deliverEntered()
-        return []  // We don't accept drops — DropZonePanel handles that.
+        return []
     }
 
     override func draggingExited(_ sender: (any NSDraggingInfo)?) {

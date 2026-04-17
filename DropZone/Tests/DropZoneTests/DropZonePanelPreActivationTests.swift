@@ -44,6 +44,6 @@ struct DropZonePanelPreActivationTests {
         p.expand()
         #expect(p.panelState == .expanded)
         // Verify the geometry constant itself — expanded uses preActivatedSize so morph is a crossfade.
-        #expect(NotchGeometry.preActivatedSize == NSSize(width: 380, height: 60))
+        #expect(NotchGeometry.preActivatedSize == NSSize(width: 380, height: 120))
     }
 }

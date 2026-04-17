@@ -25,7 +25,7 @@ public struct NotchGeometry: Sendable {
     /// Expanded drop zone size.
     public static let expandedSize = NSSize(width: 320, height: 80)
     /// Narrow pre-activation bar displayed when the cursor enters the pre-activation zone.
-    public static let preActivatedSize = NSSize(width: 380, height: 60)
+    public static let preActivatedSize = NSSize(width: 380, height: 120)
     /// Full shelf panel size (list view / thumbnail view).
     public static let shelfExpandedSize = NSSize(width: 600, height: 360)
     /// Hysteresis outset (px) between the pre-activation rect and the activation zone.
@@ -108,6 +108,17 @@ public struct NotchGeometry: Sendable {
     /// when the cursor leaves `activationZone` proper (providing hysteresis against flicker).
     public var preActivationRect: NSRect {
         activationZone.insetBy(dx: -Self.preActivationOutset, dy: -Self.preActivationOutset)
+    }
+
+    /// Large rect covering the top of the screen used by HoverDetectionPanel to detect
+    /// cursor / drag proximity. Wider + taller than preActivationRect so the user gets
+    /// feedback well before reaching the notch proper.
+    public var hoverTriggerRect: NSRect {
+        let width = screenFrame.width * 0.5
+        let height: CGFloat = 200
+        let x = screenFrame.midX - width / 2
+        let y = screenFrame.maxY - height
+        return NSRect(x: x, y: y, width: width, height: height)
     }
 
     // MARK: - Private

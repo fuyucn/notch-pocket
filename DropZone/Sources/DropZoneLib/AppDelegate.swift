@@ -304,12 +304,8 @@ extension AppDelegate: HoverDetectionDelegate {
     public func hoverEntered() {
         guard let panel = self.dropZonePanel else { return }
         guard let shelfManager = self.fileShelfManager else { return }
-        // Only pre-activate when the main panel is idle.
-        if panel.panelState == .hidden || panel.panelState == .listening || panel.panelState == .preActivated {
-            // Nudge into listening first if needed, then show the bar.
-            if panel.panelState == .hidden {
-                panel.enterListening()
-            }
+        if panel.panelState == .hidden { panel.enterListening() }
+        if panel.panelState == .listening || panel.panelState == .preActivated {
             panel.enterPreActivation(
                 primaryFileName: nil,
                 extraCount: 0,

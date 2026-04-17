@@ -235,8 +235,24 @@ struct NotchGeometryTests {
     // MARK: - Pre-activation constants and rect
 
     @Test
-    func preActivatedSizeIs380x60() {
-        #expect(NotchGeometry.preActivatedSize == NSSize(width: 380, height: 60))
+    func preActivatedSizeIs380x120() {
+        #expect(NotchGeometry.preActivatedSize == NSSize(width: 380, height: 120))
+    }
+
+    @Test
+    func hoverTriggerRectIs50PercentScreenWidthAnd200Tall() {
+        let screen = NSRect(x: 0, y: 0, width: 1600, height: 1000)
+        let geo = NotchGeometry(
+            notchRect: NSRect(x: 700, y: 968, width: 200, height: 32),
+            activationZone: NSRect(x: 670, y: 908, width: 260, height: 102),
+            screenFrame: screen,
+            hasNotch: true
+        )
+        let rect = geo.hoverTriggerRect
+        #expect(rect.width == screen.width * 0.5)
+        #expect(rect.height == 200)
+        #expect(rect.midX == screen.midX)
+        #expect(rect.maxY == screen.maxY)
     }
 
     @Test
