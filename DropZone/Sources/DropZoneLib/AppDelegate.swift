@@ -43,6 +43,7 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
         // Drop handling
         panel.dropForwarder?.onDraggingChanged = { [weak vm] inside, names in
             guard let vm else { return }
+            vm.isDragInside = inside
             vm.primaryFileName = inside ? names.first : nil
             vm.extraCount = inside ? max(0, names.count - 1) : 0
         }
@@ -50,6 +51,7 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
             guard let shelfManager else { return false }
             let added = shelfManager.addFiles(from: urls, sourceAppName: appName)
             if !added.isEmpty {
+                vm?.isDragInside = false
                 vm?.primaryFileName = nil
                 vm?.extraCount = 0
                 vm?.markDropped()

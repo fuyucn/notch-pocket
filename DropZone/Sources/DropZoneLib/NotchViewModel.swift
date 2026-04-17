@@ -13,6 +13,9 @@ public final class NotchViewModel: ObservableObject {
     @Published public var primaryFileName: String?
     @Published public var extraCount: Int = 0
     @Published public var shelfCount: Int = 0
+    /// True when a file drag is currently inside the panel's drop forwarder —
+    /// used to highlight the drop target (dashed border, fill) in the opened UI.
+    @Published public var isDragInside: Bool = false
     /// Incremented whenever the shelf content changes, so SwiftUI consumers can
     /// re-bind their NSViewRepresentable to pick up manager state.
     @Published public var shelfRefreshToken: Int = 0
