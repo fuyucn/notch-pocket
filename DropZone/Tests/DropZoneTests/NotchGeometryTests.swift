@@ -270,8 +270,8 @@ struct NotchGeometryTests {
     }
 
     @Test
-    func shelfExpandedSizeIs560x150() {
-        #expect(NotchGeometry.shelfExpandedSize == NSSize(width: 560, height: 150))
+    func shelfExpandedSizeIs580x170() {
+        #expect(NotchGeometry.shelfExpandedSize == NSSize(width: 580, height: 170))
     }
 
     @Test

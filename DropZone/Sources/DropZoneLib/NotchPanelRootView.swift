@@ -169,9 +169,9 @@ public struct NotchPanelRootView: View {
             VStack(spacing: 0) {
                 notchTopBar
                 contentBody(shelfManager: shelfManager, mode: mode)
-                    .padding(.horizontal, 20)
-                    .padding(.top, 6)
-                    .padding(.bottom, 14)
+                    .padding(.horizontal, 28)
+                    .padding(.top, 16)
+                    .padding(.bottom, 18)
             }
             .frame(width: size.width, height: size.height)
             .clipShape(NotchShape(topCornerRadius: targetTopRadius, bottomCornerRadius: targetBottomRadius))
@@ -184,7 +184,7 @@ public struct NotchPanelRootView: View {
 
     @ViewBuilder
     private func contentBody(shelfManager: FileShelfManager, mode: ShelfViewMode) -> some View {
-        HStack(spacing: 10) {
+        HStack(spacing: 14) {
             let urls = shelfManager.items.map { $0.shelfURL }
             AirDropActionView(
                 isEnabled: !urls.isEmpty,

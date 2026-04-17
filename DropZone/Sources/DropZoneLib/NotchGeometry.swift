@@ -27,7 +27,7 @@ public struct NotchGeometry: Sendable {
     /// Narrow pre-activation bar displayed when the cursor enters the pre-activation zone.
     public static let preActivatedSize = NSSize(width: 380, height: 120)
     /// Full shelf panel size (list view / thumbnail view).
-    public static let shelfExpandedSize = NSSize(width: 560, height: 150)
+    public static let shelfExpandedSize = NSSize(width: 580, height: 170)
     /// Hysteresis outset (px) between the pre-activation rect and the activation zone.
     public static let preActivationOutset: CGFloat = 8
     /// Corner radius matching the notch shape.
