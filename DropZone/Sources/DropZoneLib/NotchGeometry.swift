@@ -24,8 +24,40 @@ public struct NotchGeometry: Sendable {
     public static let fallbackPillSize = NSSize(width: 200, height: 32)
     /// Expanded drop zone size.
     public static let expandedSize = NSSize(width: 320, height: 80)
+    /// Narrow pre-activation bar displayed when the cursor enters the pre-activation zone.
+    public static let preActivatedSize = NSSize(width: 380, height: 120)
+    /// Full shelf panel size (list view / thumbnail view).
+    public static let shelfExpandedSize = NSSize(width: 580, height: 170)
+    /// Hysteresis outset (px) between the pre-activation rect and the activation zone.
+    public static let preActivationOutset: CGFloat = 8
     /// Corner radius matching the notch shape.
     public static let cornerRadius: CGFloat = 18
+    /// Horizontal padding on each side of the notch used by the popping/opened
+    /// panel shape. Makes the panel visibly "wrap" the notch.
+    public static let sidePadding: CGFloat = 80
+
+    // MARK: - Computed panel sizes
+
+    /// Panel size in the popping (pre-activation) state.
+    /// Width = notch + sidePadding*2, height = matches existing preActivatedSize.height.
+    public var preActivatedPanelSize: NSSize {
+        let notchWidth = notchRect?.width ?? 200
+        return NSSize(
+            width: notchWidth + Self.sidePadding * 2,
+            height: Self.preActivatedSize.height
+        )
+    }
+
+    /// Panel size in the opened state. Wider than popping to fit shelf content.
+    /// Width = notch + sidePadding * 4 (default 520 for 200-wide notch),
+    /// height = matches shelfExpandedSize.height (compact Dynamic Island feel).
+    public var openedPanelSize: NSSize {
+        let notchWidth = notchRect?.width ?? 200
+        return NSSize(
+            width: notchWidth + Self.sidePadding * 4,
+            height: Self.shelfExpandedSize.height
+        )
+    }
 
     // MARK: - Init
 
@@ -95,6 +127,24 @@ public struct NotchGeometry: Sendable {
     /// Whether a point (in screen coordinates) is inside the activation zone.
     public func containsPoint(_ point: NSPoint) -> Bool {
         activationZone.contains(point)
+    }
+
+    /// The pre-activation rect = `activationZone` grown by `preActivationOutset` on every side.
+    /// The drag enters pre-activation when the cursor crosses this outer rect; it exits only
+    /// when the cursor leaves `activationZone` proper (providing hysteresis against flicker).
+    public var preActivationRect: NSRect {
+        activationZone.insetBy(dx: -Self.preActivationOutset, dy: -Self.preActivationOutset)
+    }
+
+    /// Large rect covering the top of the screen used by NotchPanel. Includes the
+    /// notch/menu-bar row so the panel can be anchored flush to the top of the
+    /// screen and visually wrap the notch like a Dynamic Island.
+    public var hoverTriggerRect: NSRect {
+        let width = screenFrame.width * 0.5
+        let height: CGFloat = 200
+        let x = screenFrame.midX - width / 2
+        let y = screenFrame.maxY - height   // top-anchored
+        return NSRect(x: x, y: y, width: width, height: height)
     }
 
     // MARK: - Private
