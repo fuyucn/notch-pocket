@@ -89,9 +89,7 @@ private final class DragSourceNSView: NSView, NSDraggingSource {
         _ session: NSDraggingSession,
         sourceOperationMaskFor context: NSDraggingContext
     ) -> NSDragOperation {
-        // Copy only — move would fail on Caches-backed files (see
-        // FileDragSourceView).
-        return [.copy]
+        return [.copy, .move, .generic]
     }
 
     nonisolated func draggingSession(

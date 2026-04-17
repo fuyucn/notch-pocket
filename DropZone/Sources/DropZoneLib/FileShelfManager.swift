@@ -79,15 +79,19 @@ public final class FileShelfManager {
 
     // MARK: - Init
 
-    /// Create a FileShelfManager with a specific cache directory.
-    /// - Parameter directory: The root directory for shelf storage. If nil, uses the default cache location.
+    /// Create a FileShelfManager with a specific storage directory.
+    /// - Parameter directory: The root directory for shelf storage. If nil,
+    ///   uses `~/Library/Application Support/NotchPocket/shelf`. We
+    ///   deliberately avoid `~/Library/Caches` so the OS can perform
+    ///   `NSDragOperation.move` on shelved files without refusing with
+    ///   `NSFileWriteUnknownError` (-8058).
     public init(directory: URL? = nil, fileManager: FileManager = .default) {
         self.fileManager = fileManager
         if let directory {
             self.shelfDirectory = directory
         } else {
-            let caches = fileManager.urls(for: .cachesDirectory, in: .userDomainMask).first!
-            self.shelfDirectory = caches.appendingPathComponent("com.dropzone.app/shelf", isDirectory: true)
+            let appSupport = fileManager.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
+            self.shelfDirectory = appSupport.appendingPathComponent("NotchPocket/shelf", isDirectory: true)
         }
     }
 
