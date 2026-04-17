@@ -53,6 +53,8 @@ public final class GlobalDragMonitor {
 
     private var globalMonitor: Any?
     private var localMonitor: Any?
+    private var mouseMovedGlobalMonitor: Any?
+    private var mouseMovedLocalMonitor: Any?
     private var pollingTimer: Timer?
 
     // MARK: - Init
@@ -90,6 +92,26 @@ public final class GlobalDragMonitor {
             }
             return event
         }
+
+        // Hover-driven pre-activation — inspired by Lakr233/NotchDrop.
+        // Fires whenever the cursor is near the notch, even without an active drag.
+        // See docs/superpowers/specs/2026-04-17-drag-preactivation-addendum-hover-trigger.md
+        mouseMovedGlobalMonitor = NSEvent.addGlobalMonitorForEvents(
+            matching: [.mouseMoved]
+        ) { [weak self] _ in
+            MainActor.assumeIsolated {
+                self?.handleMouseMoved()
+            }
+        }
+
+        mouseMovedLocalMonitor = NSEvent.addLocalMonitorForEvents(
+            matching: [.mouseMoved]
+        ) { [weak self] event in
+            MainActor.assumeIsolated {
+                self?.handleMouseMoved()
+            }
+            return event
+        }
     }
 
     /// Stop monitoring for drag events.
@@ -102,8 +124,22 @@ public final class GlobalDragMonitor {
             NSEvent.removeMonitor(lm)
             localMonitor = nil
         }
+        if let mg = mouseMovedGlobalMonitor {
+            NSEvent.removeMonitor(mg)
+            mouseMovedGlobalMonitor = nil
+        }
+        if let ml = mouseMovedLocalMonitor {
+            NSEvent.removeMonitor(ml)
+            mouseMovedLocalMonitor = nil
+        }
         stopPolling()
         resetState()
+    }
+
+    // MARK: - Hover-driven pre-activation
+
+    private func handleMouseMoved() {
+        processPointerForTesting(NSEvent.mouseLocation, fileNames: currentDragFileNames())
     }
 
     // MARK: - Pasteboard sniffing
