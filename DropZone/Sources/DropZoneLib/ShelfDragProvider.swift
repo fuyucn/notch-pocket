@@ -1,41 +1,21 @@
 import AppKit
-import UniformTypeIdentifiers
 
-/// Build a correctly-typed `NSItemProvider` for dragging a shelf file out to
-/// Finder/apps.
+/// Build an `NSItemProvider` suitable for dragging a shelf file URL out to
+/// Finder and other apps.
 ///
-/// `NSItemProvider(contentsOf:)` tries to *read* the file into the provider,
-/// which breaks for:
-///   - `.app` bundles (directories) — the provider reads the directory
-///     itself and the receiving app gets an inconsistent UTI.
-///   - plain-text files (e.g. Markdown) — the receiver falls back to
-///     `public.plain-text`/`public.data` and names the dropped file with the
-///     UTI's localized description instead of the original filename.
+/// We deliberately avoid `NSItemProvider(contentsOf:)`, which tries to *read*
+/// the file into the provider:
+///   - For `.app` bundles (directories) the provider reads the directory and
+///     drops end up as inconsistent items.
+///   - For plain-text files (e.g. `.md`) the receiver falls back to
+///     `public.plain-text`/`public.data` and renames the dropped file to the
+///     UTI's localized description (e.g. "Markdown text file.md").
 ///
-/// Using `registerFileRepresentation(forTypeIdentifier:)` with the file's
-/// actual UTI and the raw file URL tells AppKit "this is a reference to a
-/// real file on disk of type X; the name is the URL's lastPathComponent".
-/// Finder and friends then drop a copy named exactly like the source.
+/// Wrapping an `NSURL` as the backing object instead registers the item as a
+/// plain file-URL reference — pasteboard consumers (Finder, Mail, etc.) see
+/// `public.file-url` plus the URL's `lastPathComponent` and copy the file
+/// with its original name and any bundle contents intact.
 @MainActor
 func makeFileItemProvider(for url: URL) -> NSItemProvider {
-    let provider = NSItemProvider()
-    provider.suggestedName = url.lastPathComponent
-
-    let resolvedType = (try? url.resourceValues(forKeys: [.contentTypeKey]).contentType)
-        ?? UTType(filenameExtension: url.pathExtension)
-        ?? (url.hasDirectoryPath ? .folder : .data)
-
-    // `.open` so Finder does a normal copy (not a substituted "open in this app" flow).
-    let options = NSItemProviderFileOptions.openInPlace
-    _ = provider  // silence unused local warning if we only use register…
-    provider.registerFileRepresentation(
-        forTypeIdentifier: resolvedType.identifier,
-        fileOptions: options,
-        visibility: .all
-    ) { completion in
-        // Hand back the URL in-place; AppKit copies from disk.
-        completion(url, true, nil)
-        return nil
-    }
-    return provider
+    NSItemProvider(object: url as NSURL)
 }
