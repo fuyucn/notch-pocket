@@ -120,6 +120,24 @@ struct DragDestinationViewTests {
         #expect(!view.isHighlighted)
         #expect(view.dragItemCount == 0)
     }
+
+    @Test @MainActor
+    func sourceAppNameFromBundleIDIsNilWhenUnknown() {
+        let name = DragDestinationView.sourceAppName(forBundleID: "com.example.doesnotexist.totally-fake")
+        #expect(name == nil)
+    }
+
+    @Test @MainActor
+    func sourceAppNameFromBundleIDResolvesFinder() {
+        let name = DragDestinationView.sourceAppName(forBundleID: "com.apple.finder")
+        #expect(name == "Finder")
+    }
+
+    @Test @MainActor
+    func sourceAppBundleIDTypeConstantMatchesApplePasteboardType() {
+        #expect(DragDestinationView.sourceAppBundleIDType.rawValue
+                == "com.apple.pasteboard.source-app-bundle-identifier")
+    }
 }
 
 @Suite("ShelfItem Tests")

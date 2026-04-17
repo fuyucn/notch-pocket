@@ -37,6 +37,22 @@ public final class DragDestinationView: NSView {
         .filePromise,
     ]
 
+    /// Apple's private pasteboard type that carries the source app's bundle identifier
+    /// during drag-and-drop. Present for most AppKit-based drag sources (Finder, Safari, Preview…).
+    public static let sourceAppBundleIDType =
+        NSPasteboard.PasteboardType("com.apple.pasteboard.source-app-bundle-identifier")
+
+    /// Resolve a bundle identifier to the app's display name via NSWorkspace + Bundle.
+    /// Returns nil if the bundle ID is unknown or the Info.plist has no `CFBundleName`.
+    public static func sourceAppName(forBundleID bundleID: String) -> String? {
+        guard let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleID) else {
+            return nil
+        }
+        guard let bundle = Bundle(url: url) else { return nil }
+        return bundle.infoDictionary?["CFBundleName"] as? String
+            ?? bundle.infoDictionary?["CFBundleDisplayName"] as? String
+    }
+
     // MARK: - Init
 
     public override init(frame frameRect: NSRect) {
@@ -89,7 +105,9 @@ public final class DragDestinationView: NSView {
         let urls = extractFileURLs(from: sender)
         guard !urls.isEmpty, let manager = fileShelfManager else { return false }
 
-        let added = manager.addFiles(from: urls)
+        let bundleID = sender.draggingPasteboard.string(forType: Self.sourceAppBundleIDType)
+        let appName = bundleID.flatMap(Self.sourceAppName(forBundleID:))
+        let added = manager.addFiles(from: urls, sourceAppName: appName)
 
         setHighlighted(false)
         dragItemCount = 0
