@@ -6,17 +6,20 @@ public struct ShelfListView: View {
     public let isDragInside: Bool
     public let onOpen: (ShelfItem) -> Void
     public let onRemove: (UUID) -> Void
+    public let onRemoveAll: () -> Void
 
     public init(
         items: [ShelfItem],
         isDragInside: Bool = false,
         onOpen: @escaping (ShelfItem) -> Void,
-        onRemove: @escaping (UUID) -> Void
+        onRemove: @escaping (UUID) -> Void,
+        onRemoveAll: @escaping () -> Void = {}
     ) {
         self.items = items
         self.isDragInside = isDragInside
         self.onOpen = onOpen
         self.onRemove = onRemove
+        self.onRemoveAll = onRemoveAll
     }
 
     public var sortedItems: [ShelfItem] {
@@ -54,7 +57,7 @@ public struct ShelfListView: View {
                 .padding(6)
             }
             if !sortedItems.isEmpty {
-                AllDragHandle(items: sortedItems)
+                AllDragHandle(items: sortedItems, onAllMoved: onRemoveAll)
                     .padding(6)
             }
         }

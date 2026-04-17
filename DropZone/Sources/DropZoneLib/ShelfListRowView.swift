@@ -77,9 +77,9 @@ public struct ShelfListRowView: View {
         .onHover { hovering in
             withAnimation(.easeInOut(duration: 0.12)) { isHovering = hovering }
         }
-        .onDrag {
-            makeFileItemProvider(for: item.shelfURL)
-        }
+        .overlay(
+            FileDragSourceView(url: item.shelfURL, onMoved: onRemove)
+        )
         .contextMenu {
             Button("Open") { onOpen() }
             Button("Remove", role: .destructive) { onRemove() }

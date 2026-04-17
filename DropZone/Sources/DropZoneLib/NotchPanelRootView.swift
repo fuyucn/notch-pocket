@@ -206,14 +206,16 @@ public struct NotchPanelRootView: View {
                     items: shelfManager.items,
                     isDragInside: viewModel.isDragInside,
                     onOpen: { item in NSWorkspace.shared.open(item.shelfURL) },
-                    onRemove: { [weak shelfManager] id in shelfManager?.removeItem(id) }
+                    onRemove: { [weak shelfManager] id in shelfManager?.removeItem(id) },
+                    onRemoveAll: { [weak shelfManager] in shelfManager?.clearAll() }
                 )
             case .list:
                 ShelfListView(
                     items: shelfManager.items,
                     isDragInside: viewModel.isDragInside,
                     onOpen: { item in NSWorkspace.shared.open(item.shelfURL) },
-                    onRemove: { [weak shelfManager] id in shelfManager?.removeItem(id) }
+                    onRemove: { [weak shelfManager] id in shelfManager?.removeItem(id) },
+                    onRemoveAll: { [weak shelfManager] in shelfManager?.clearAll() }
                 )
             }
         }

@@ -6,17 +6,20 @@ public struct ShelfGridView: View {
     public let isDragInside: Bool
     public let onOpen: (ShelfItem) -> Void
     public let onRemove: (UUID) -> Void
+    public let onRemoveAll: () -> Void
 
     public init(
         items: [ShelfItem],
         isDragInside: Bool = false,
         onOpen: @escaping (ShelfItem) -> Void,
-        onRemove: @escaping (UUID) -> Void
+        onRemove: @escaping (UUID) -> Void,
+        onRemoveAll: @escaping () -> Void = {}
     ) {
         self.items = items
         self.isDragInside = isDragInside
         self.onOpen = onOpen
         self.onRemove = onRemove
+        self.onRemoveAll = onRemoveAll
     }
 
     public var sortedItems: [ShelfItem] {
@@ -56,7 +59,7 @@ public struct ShelfGridView: View {
                 .frame(maxWidth: .infinity, minHeight: 76)
             }
             if !sortedItems.isEmpty {
-                AllDragHandle(items: sortedItems)
+                AllDragHandle(items: sortedItems, onAllMoved: onRemoveAll)
                     .padding(6)
             }
         }
@@ -78,7 +81,7 @@ public struct ShelfGridView: View {
 }
 
 @MainActor
-private struct ShelfGridCell: View {
+struct ShelfGridCell: View {
     let item: ShelfItem
     let onOpen: () -> Void
     let onRemove: () -> Void
@@ -122,9 +125,9 @@ private struct ShelfGridCell: View {
         .onHover { hovering in
             withAnimation(.easeInOut(duration: 0.12)) { isHovering = hovering }
         }
-        .onDrag {
-            makeFileItemProvider(for: item.shelfURL)
-        }
+        .overlay(
+            FileDragSourceView(url: item.shelfURL, onMoved: onRemove)
+        )
         .contextMenu {
             Button("Open") { onOpen() }
             Button("Remove", role: .destructive) { onRemove() }

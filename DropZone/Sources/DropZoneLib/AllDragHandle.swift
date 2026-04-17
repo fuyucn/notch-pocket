@@ -10,13 +10,15 @@ import AppKit
 @MainActor
 public struct AllDragHandle: View {
     public let items: [ShelfItem]
+    public let onAllMoved: () -> Void
 
-    public init(items: [ShelfItem]) {
+    public init(items: [ShelfItem], onAllMoved: @escaping () -> Void = {}) {
         self.items = items
+        self.onAllMoved = onAllMoved
     }
 
     public var body: some View {
-        MultiFileDragSourceView(urls: items.map { $0.shelfURL })
+        MultiFileDragSourceView(urls: items.map { $0.shelfURL }, onMoved: onAllMoved)
             .frame(width: 44, height: 22)
             .overlay(
                 HStack(spacing: 0) {
@@ -38,15 +40,18 @@ public struct AllDragHandle: View {
 @MainActor
 private struct MultiFileDragSourceView: NSViewRepresentable {
     let urls: [URL]
+    let onMoved: () -> Void
 
     func makeNSView(context: Context) -> DragSourceNSView {
         let v = DragSourceNSView()
         v.urls = urls
+        v.onMoved = onMoved
         return v
     }
 
     func updateNSView(_ nsView: DragSourceNSView, context: Context) {
         nsView.urls = urls
+        nsView.onMoved = onMoved
     }
 }
 
@@ -54,6 +59,7 @@ private struct MultiFileDragSourceView: NSViewRepresentable {
 @MainActor
 private final class DragSourceNSView: NSView, NSDraggingSource {
     var urls: [URL] = []
+    var onMoved: () -> Void = {}
 
     override init(frame frameRect: NSRect) {
         super.init(frame: frameRect)
@@ -68,10 +74,6 @@ private final class DragSourceNSView: NSView, NSDraggingSource {
             return
         }
 
-        // Use NSURL directly as pasteboard writer — NSURL already registers
-        // itself as a file-url pasteboard item with the correct type and
-        // name, which keeps Finder drops named after the original file
-        // (including .app bundles and plain-text like .md).
         let items = urls.map { url -> NSDraggingItem in
             let item = NSDraggingItem(pasteboardWriter: url as NSURL)
             item.draggingFrame = NSRect(x: 0, y: 0, width: 32, height: 32)
@@ -87,8 +89,18 @@ private final class DragSourceNSView: NSView, NSDraggingSource {
         _ session: NSDraggingSession,
         sourceOperationMaskFor context: NSDraggingContext
     ) -> NSDragOperation {
-        // Copy is the safe default. Moving/removing-on-drag-out is a future
-        // enhancement (needs session-ended delegate + file-promise plumbing).
-        return [.copy]
+        let optionDown = NSEvent.modifierFlags.contains(.option)
+        return optionDown ? [.copy] : [.move, .copy]
+    }
+
+    nonisolated func draggingSession(
+        _ session: NSDraggingSession,
+        endedAt screenPoint: NSPoint,
+        operation: NSDragOperation
+    ) {
+        guard operation.contains(.move) else { return }
+        Task { @MainActor [weak self] in
+            self?.onMoved()
+        }
     }
 }
