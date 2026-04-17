@@ -82,12 +82,14 @@ public struct NotchPanelRootView: View {
     }
 
     /// Horizontal strip at the very top of the panel that sits alongside the
-    /// physical notch. Shows a logo on the left and file-count badge on the right.
+    /// physical notch. Left shoulder: Pocky logo. Right shoulder: either the
+    /// shelf-count badge (popping) or view-toggle + close buttons (opened).
     @ViewBuilder
     private var notchTopBar: some View {
         let notchHeight = viewModel.geometry.notchRect?.height ?? 32
         let notchWidth = viewModel.geometry.notchRect?.width ?? 200
         HStack(spacing: 0) {
+            // Left shoulder
             Image(systemName: "tray.fill")
                 .font(.system(size: 13, weight: .medium))
                 .foregroundStyle(.white.opacity(0.9))
@@ -96,6 +98,38 @@ public struct NotchPanelRootView: View {
             // Reserve exact notch width so the left/right content ends up on
             // the notch's shoulders, not under the physical cutout.
             Color.clear.frame(width: notchWidth)
+            // Right shoulder
+            rightShoulder
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.leading, 10)
+        }
+        .frame(height: notchHeight)
+    }
+
+    @ViewBuilder
+    private var rightShoulder: some View {
+        switch viewModel.status {
+        case .opened:
+            HStack(spacing: 4) {
+                let mode = viewModel.settingsManager?.shelfViewMode ?? .list
+                Button(action: toggleViewMode) {
+                    Image(systemName: mode == .list ? "square.grid.2x2" : "list.bullet")
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(.white.opacity(0.9))
+                        .frame(width: 20, height: 20)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                Button(action: close) {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 10, weight: .bold))
+                        .foregroundStyle(.white.opacity(0.9))
+                        .frame(width: 20, height: 20)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+            }
+        case .popping:
             if viewModel.shelfCount > 0 {
                 Text("\(viewModel.shelfCount)")
                     .font(.system(size: 11, weight: .semibold))
@@ -103,14 +137,22 @@ public struct NotchPanelRootView: View {
                     .padding(.horizontal, 7)
                     .padding(.vertical, 2)
                     .background(Capsule().fill(Color.white.opacity(0.18)))
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.leading, 10)
             } else {
-                Color.clear
-                    .frame(maxWidth: .infinity)
+                EmptyView()
             }
+        case .closed:
+            EmptyView()
         }
-        .frame(height: notchHeight)
+    }
+
+    private func toggleViewMode() {
+        guard let settings = viewModel.settingsManager else { return }
+        settings.shelfViewMode = (settings.shelfViewMode == .list) ? .thumbnail : .list
+        viewModel.shelfRefreshToken &+= 1
+    }
+
+    private func close() {
+        viewModel.forceClose()
     }
 
     @ViewBuilder
@@ -121,19 +163,6 @@ public struct NotchPanelRootView: View {
             VStack(spacing: 0) {
                 notchTopBar
                 Spacer().frame(height: 8)
-                ShelfHeaderView(
-                    itemCount: shelfManager.items.count,
-                    viewMode: mode,
-                    onToggleView: { [weak vm = viewModel] in
-                        guard let vm, let settings = vm.settingsManager else { return }
-                        settings.shelfViewMode = (settings.shelfViewMode == .list) ? .thumbnail : .list
-                        vm.shelfRefreshToken &+= 1  // force SwiftUI re-read
-                    },
-                    onMinimize: { [weak vm = viewModel] in
-                        vm?.forceClose()
-                    }
-                )
-                Divider().background(Color.white.opacity(0.08))
                 Group {
                     if mode == .list {
                         ShelfListView(
