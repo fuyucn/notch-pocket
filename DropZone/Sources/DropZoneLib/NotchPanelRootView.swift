@@ -82,19 +82,25 @@ public struct NotchPanelRootView: View {
     }
 
     /// Horizontal strip at the very top of the panel that sits alongside the
-    /// physical notch. Left shoulder: Pocky logo. Right shoulder: either the
-    /// shelf-count badge (popping) or view-toggle + close buttons (opened).
+    /// physical notch. Left shoulder: logo + title. Right shoulder: shelf-count
+    /// badge (popping) or view-toggle + close buttons (opened).
     @ViewBuilder
     private var notchTopBar: some View {
         let notchHeight = viewModel.geometry.notchRect?.height ?? 32
         let notchWidth = viewModel.geometry.notchRect?.width ?? 200
         HStack(spacing: 0) {
-            // Left shoulder
-            Image(systemName: "tray.fill")
-                .font(.system(size: 13, weight: .medium))
-                .foregroundStyle(.white.opacity(0.9))
-                .frame(maxWidth: .infinity, alignment: .trailing)
-                .padding(.trailing, 10)
+            // Left shoulder — logo + title
+            HStack(spacing: 6) {
+                Image(systemName: "tray.fill")
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(.white.opacity(0.9))
+                Text("Notch Pocket")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(.white.opacity(0.9))
+                    .lineLimit(1)
+            }
+            .frame(maxWidth: .infinity, alignment: .trailing)
+            .padding(.trailing, 10)
             // Reserve exact notch width so the left/right content ends up on
             // the notch's shoulders, not under the physical cutout.
             Color.clear.frame(width: notchWidth)
@@ -162,10 +168,9 @@ public struct NotchPanelRootView: View {
             let mode = viewModel.settingsManager?.shelfViewMode ?? .list
             VStack(spacing: 0) {
                 notchTopBar
-                titleRow
                 contentBody(shelfManager: shelfManager, mode: mode)
                     .padding(.horizontal, 14)
-                    .padding(.top, 4)
+                    .padding(.top, 8)
                     .padding(.bottom, 12)
             }
             .frame(width: size.width, height: size.height)
@@ -175,19 +180,6 @@ public struct NotchPanelRootView: View {
             Text("Shelf unavailable")
                 .foregroundStyle(.white.opacity(0.6))
         }
-    }
-
-    @ViewBuilder
-    private var titleRow: some View {
-        HStack {
-            Text("Notch Pocket")
-                .font(.system(size: 13, weight: .semibold))
-                .foregroundStyle(.white)
-            Spacer()
-        }
-        .padding(.horizontal, 14)
-        .padding(.top, 2)
-        .padding(.bottom, 2)
     }
 
     @ViewBuilder
