@@ -38,6 +38,23 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
         let panel = NotchPanel(viewModel: vm)
         notchPanel = panel
 
+        // Drop handling
+        panel.dropForwarder?.onDraggingChanged = { [weak vm] inside, names in
+            guard let vm else { return }
+            vm.primaryFileName = inside ? names.first : nil
+            vm.extraCount = inside ? max(0, names.count - 1) : 0
+        }
+        panel.dropForwarder?.onDropFiles = { [weak shelfManager, weak vm] urls, appName in
+            guard let shelfManager else { return false }
+            let added = shelfManager.addFiles(from: urls, sourceAppName: appName)
+            if !added.isEmpty {
+                vm?.primaryFileName = nil
+                vm?.extraCount = 0
+                return true
+            }
+            return false
+        }
+
         // Keep shelfCount synced with shelf manager
         shelfManager.onItemsChanged = { [weak vm, weak shelfManager] in
             guard let vm, let shelfManager else { return }

@@ -6,6 +6,7 @@ import SwiftUI
 public final class NotchPanel: NSPanel {
     public let viewModel: NotchViewModel
     private var cancellables: Set<AnyCancellable> = []
+    public private(set) var dropForwarder: NotchDropForwarder?
 
     public init(viewModel: NotchViewModel) {
         self.viewModel = viewModel
@@ -33,10 +34,20 @@ public final class NotchPanel: NSPanel {
         // Click-through in the idle state
         ignoresMouseEvents = true
 
+        let container = NSView(frame: rect)
+        container.autoresizingMask = [.width, .height]
+
         let host = NSHostingView(rootView: NotchPanelRootView(viewModel: viewModel))
-        host.frame = rect
+        host.frame = container.bounds
         host.autoresizingMask = [.width, .height]
-        contentView = host
+        container.addSubview(host)
+
+        let forwarder = NotchDropForwarder(frame: container.bounds)
+        forwarder.autoresizingMask = [.width, .height]
+        container.addSubview(forwarder)
+        self.dropForwarder = forwarder
+
+        contentView = container
 
         setFrame(rect, display: false)
         orderFrontRegardless()
