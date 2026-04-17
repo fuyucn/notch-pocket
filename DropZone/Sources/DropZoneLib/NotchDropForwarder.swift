@@ -15,11 +15,7 @@ public final class NotchDropForwarder: NSView {
 
     required init?(coder: NSCoder) { fatalError() }
 
-    // Do NOT override hitTest to return nil — AppKit uses hitTest to decide
-    // where drag-and-drop events go. Returning nil here would skip this view
-    // entirely for drag sessions, breaking file-drop detection. Click-through
-    // for non-drag events is handled at the window level via
-    // `NSPanel.ignoresMouseEvents = true`.
+    public override func hitTest(_ point: NSPoint) -> NSView? { nil }
 
     public override func draggingEntered(_ sender: any NSDraggingInfo) -> NSDragOperation {
         guard Self.pasteboardHasFileURLs(sender.draggingPasteboard) else {
