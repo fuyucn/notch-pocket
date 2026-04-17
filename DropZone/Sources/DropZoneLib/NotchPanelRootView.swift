@@ -200,11 +200,13 @@ public struct NotchPanelRootView: View {
                     vm?.airDropRectInPanel = rect
                 }
             )
+            let removeOnDragOut = viewModel.settingsManager?.removeOnDragOut ?? true
             switch mode {
             case .thumbnail:
                 ShelfGridView(
                     items: shelfManager.items,
                     isDragInside: viewModel.isDragInside,
+                    removeOnDragOut: removeOnDragOut,
                     onOpen: { item in NSWorkspace.shared.open(item.shelfURL) },
                     onRemove: { [weak shelfManager] id in shelfManager?.removeItem(id) },
                     onRemoveAll: { [weak shelfManager] in shelfManager?.clearAll() }
@@ -213,6 +215,7 @@ public struct NotchPanelRootView: View {
                 ShelfListView(
                     items: shelfManager.items,
                     isDragInside: viewModel.isDragInside,
+                    removeOnDragOut: removeOnDragOut,
                     onOpen: { item in NSWorkspace.shared.open(item.shelfURL) },
                     onRemove: { [weak shelfManager] id in shelfManager?.removeItem(id) },
                     onRemoveAll: { [weak shelfManager] in shelfManager?.clearAll() }

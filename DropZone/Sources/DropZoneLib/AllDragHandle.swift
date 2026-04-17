@@ -89,8 +89,7 @@ private final class DragSourceNSView: NSView, NSDraggingSource {
         _ session: NSDraggingSession,
         sourceOperationMaskFor context: NSDraggingContext
     ) -> NSDragOperation {
-        let optionDown = NSEvent.modifierFlags.contains(.option)
-        return optionDown ? [.copy] : [.move, .copy]
+        return [.copy, .move, .generic]
     }
 
     nonisolated func draggingSession(
@@ -98,7 +97,7 @@ private final class DragSourceNSView: NSView, NSDraggingSource {
         endedAt screenPoint: NSPoint,
         operation: NSDragOperation
     ) {
-        guard operation.contains(.move) else { return }
+        guard !operation.isEmpty else { return }
         Task { @MainActor [weak self] in
             self?.onMoved()
         }

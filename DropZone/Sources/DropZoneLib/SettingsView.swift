@@ -21,6 +21,7 @@ public struct SettingsView: View {
     @State private var soundEffects: Bool
     @State private var shelfViewMode: ShelfViewMode
     @State private var shelfPersistence: ShelfPersistence
+    @State private var removeOnDragOut: Bool
     @State private var inputMonitoringStatus: PermissionStatus = .undetermined
     @State private var permissionsManager = PermissionsManager()
 
@@ -34,6 +35,7 @@ public struct SettingsView: View {
         _soundEffects = State(initialValue: settingsManager.soundEffectsEnabled)
         _shelfViewMode = State(initialValue: settingsManager.shelfViewMode)
         _shelfPersistence = State(initialValue: settingsManager.shelfPersistence)
+        _removeOnDragOut = State(initialValue: settingsManager.removeOnDragOut)
     }
 
     public var body: some View {
@@ -125,6 +127,11 @@ public struct SettingsView: View {
                     .onChange(of: shelfPersistence) { _, newValue in
                         settingsManager.shelfPersistence = newValue
                     }
+
+                    Toggle("Remove files from shelf after drag-out", isOn: $removeOnDragOut)
+                        .onChange(of: removeOnDragOut) { _, newValue in
+                            settingsManager.removeOnDragOut = newValue
+                        }
                 }
             Section("Permissions") {
                     HStack {

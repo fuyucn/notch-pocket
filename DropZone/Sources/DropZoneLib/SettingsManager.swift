@@ -12,6 +12,7 @@ private enum SettingsKey {
     static let showOnAllDisplays = "showOnAllDisplays"
     static let shelfViewMode = "shelfViewMode"
     static let shelfPersistence = "shelfPersistence"
+    static let removeOnDragOut = "removeOnDragOut"
 }
 
 /// Animation speed presets.
@@ -93,6 +94,7 @@ public final class SettingsManager {
             SettingsKey.showOnAllDisplays: false,
             SettingsKey.shelfViewMode: ShelfViewMode.list.rawValue,
             SettingsKey.shelfPersistence: ShelfPersistence.persistent.rawValue,
+            SettingsKey.removeOnDragOut: true,
         ])
     }
 
@@ -216,6 +218,21 @@ public final class SettingsManager {
         }
         set {
             defaults.set(newValue.rawValue, forKey: SettingsKey.shelfPersistence)
+            notifyChanged()
+        }
+    }
+
+    // MARK: - Remove On Drag Out
+    //
+    // Whether to remove a file from the shelf after the user drags it out to
+    // another app/Finder. `true` = AirDrop-style ephemeral clipboard (default);
+    // `false` = clipboard-style keep-around. Independent of the Option key
+    // (which controls copy/move on the *receiving* side per macOS convention).
+
+    public var removeOnDragOut: Bool {
+        get { defaults.bool(forKey: SettingsKey.removeOnDragOut) }
+        set {
+            defaults.set(newValue, forKey: SettingsKey.removeOnDragOut)
             notifyChanged()
         }
     }

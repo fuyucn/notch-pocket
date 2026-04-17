@@ -2,36 +2,37 @@ import AppKit
 import SwiftUI
 
 /// SwiftUI bridge around an AppKit `NSDraggingSource` view for a single
-/// shelf file. Starts a drag session on mouseDown, reports move/copy
-/// (Option toggles copy), and tells the caller when the drag ends
-/// successfully with `.move` so the shelf can remove the item.
+/// shelf file. Starts a drag session on mouseDown. The shelf-side behavior
+/// (remove on drag-out vs keep) is controlled by a settings lookup the
+/// caller supplies, NOT by the Option key — Option is left to macOS's
+/// standard copy/move semantics on the receiving side.
 @MainActor
 public struct FileDragSourceView: NSViewRepresentable {
     public let url: URL
-    public let onMoved: () -> Void
+    public let onDragEnded: (_ droppedSuccessfully: Bool) -> Void
 
-    public init(url: URL, onMoved: @escaping () -> Void) {
+    public init(url: URL, onDragEnded: @escaping (_ droppedSuccessfully: Bool) -> Void) {
         self.url = url
-        self.onMoved = onMoved
+        self.onDragEnded = onDragEnded
     }
 
     public func makeNSView(context: Context) -> FileDragSourceNSView {
         let v = FileDragSourceNSView()
         v.url = url
-        v.onMoved = onMoved
+        v.onDragEnded = onDragEnded
         return v
     }
 
     public func updateNSView(_ nsView: FileDragSourceNSView, context: Context) {
         nsView.url = url
-        nsView.onMoved = onMoved
+        nsView.onDragEnded = onDragEnded
     }
 }
 
 @MainActor
 public final class FileDragSourceNSView: NSView, NSDraggingSource {
     public var url: URL = URL(fileURLWithPath: "/")
-    public var onMoved: () -> Void = {}
+    public var onDragEnded: (_ droppedSuccessfully: Bool) -> Void = { _ in }
 
     public override init(frame frameRect: NSRect) {
         super.init(frame: frameRect)
@@ -41,9 +42,6 @@ public final class FileDragSourceNSView: NSView, NSDraggingSource {
     public required init?(coder: NSCoder) { nil }
 
     public override func mouseDown(with event: NSEvent) {
-        // Only fire on actual drag, not plain click — AppKit handles this via
-        // mouseDragged; but starting a drag session in mouseDown with a
-        // synthesized drag item is the idiomatic pattern for click-and-drag.
         let item = NSDraggingItem(pasteboardWriter: url as NSURL)
         item.draggingFrame = NSRect(x: 0, y: 0, width: bounds.width, height: bounds.height)
         beginDraggingSession(with: [item], event: event, source: self)
@@ -55,9 +53,9 @@ public final class FileDragSourceNSView: NSView, NSDraggingSource {
         _ session: NSDraggingSession,
         sourceOperationMaskFor context: NSDraggingContext
     ) -> NSDragOperation {
-        // Option held ⇒ copy; otherwise move (with copy fallback).
-        let optionDown = NSEvent.modifierFlags.contains(.option)
-        return optionDown ? [.copy] : [.move, .copy]
+        // Let the receiving app pick (copy/move). macOS maps Option → copy,
+        // default → move for file URLs. We don't override this.
+        return [.copy, .move, .generic]
     }
 
     nonisolated public func draggingSession(
@@ -65,10 +63,10 @@ public final class FileDragSourceNSView: NSView, NSDraggingSource {
         endedAt screenPoint: NSPoint,
         operation: NSDragOperation
     ) {
-        // Only remove from shelf if the receiver actually took a move.
-        guard operation.contains(.move) else { return }
+        // A successful drop has a non-empty operation; a cancelled drag is [].
+        let accepted = !operation.isEmpty
         Task { @MainActor [weak self] in
-            self?.onMoved()
+            self?.onDragEnded(accepted)
         }
     }
 }

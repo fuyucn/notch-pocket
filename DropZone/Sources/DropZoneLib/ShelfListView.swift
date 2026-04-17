@@ -4,6 +4,7 @@ import SwiftUI
 public struct ShelfListView: View {
     public let items: [ShelfItem]
     public let isDragInside: Bool
+    public let removeOnDragOut: Bool
     public let onOpen: (ShelfItem) -> Void
     public let onRemove: (UUID) -> Void
     public let onRemoveAll: () -> Void
@@ -11,12 +12,14 @@ public struct ShelfListView: View {
     public init(
         items: [ShelfItem],
         isDragInside: Bool = false,
+        removeOnDragOut: Bool = true,
         onOpen: @escaping (ShelfItem) -> Void,
         onRemove: @escaping (UUID) -> Void,
         onRemoveAll: @escaping () -> Void = {}
     ) {
         self.items = items
         self.isDragInside = isDragInside
+        self.removeOnDragOut = removeOnDragOut
         self.onOpen = onOpen
         self.onRemove = onRemove
         self.onRemoveAll = onRemoveAll
@@ -47,6 +50,7 @@ public struct ShelfListView: View {
                         ForEach(sortedItems) { item in
                             ShelfListRowView(
                                 item: item,
+                                removeOnDragOut: removeOnDragOut,
                                 onOpen: { onOpen(item) },
                                 onRemove: { onRemove(item.id) }
                             )
@@ -57,8 +61,11 @@ public struct ShelfListView: View {
                 .padding(6)
             }
             if !sortedItems.isEmpty {
-                AllDragHandle(items: sortedItems, onAllMoved: onRemoveAll)
-                    .padding(6)
+                AllDragHandle(
+                    items: sortedItems,
+                    onAllMoved: { if removeOnDragOut { onRemoveAll() } }
+                )
+                .padding(6)
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)

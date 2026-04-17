@@ -4,6 +4,7 @@ import SwiftUI
 public struct ShelfGridView: View {
     public let items: [ShelfItem]
     public let isDragInside: Bool
+    public let removeOnDragOut: Bool
     public let onOpen: (ShelfItem) -> Void
     public let onRemove: (UUID) -> Void
     public let onRemoveAll: () -> Void
@@ -11,12 +12,14 @@ public struct ShelfGridView: View {
     public init(
         items: [ShelfItem],
         isDragInside: Bool = false,
+        removeOnDragOut: Bool = true,
         onOpen: @escaping (ShelfItem) -> Void,
         onRemove: @escaping (UUID) -> Void,
         onRemoveAll: @escaping () -> Void = {}
     ) {
         self.items = items
         self.isDragInside = isDragInside
+        self.removeOnDragOut = removeOnDragOut
         self.onOpen = onOpen
         self.onRemove = onRemove
         self.onRemoveAll = onRemoveAll
@@ -49,6 +52,7 @@ public struct ShelfGridView: View {
                         ForEach(sortedItems) { item in
                             ShelfGridCell(
                                 item: item,
+                                removeOnDragOut: removeOnDragOut,
                                 onOpen: { onOpen(item) },
                                 onRemove: { onRemove(item.id) }
                             )
@@ -59,8 +63,11 @@ public struct ShelfGridView: View {
                 .frame(maxWidth: .infinity, minHeight: 76)
             }
             if !sortedItems.isEmpty {
-                AllDragHandle(items: sortedItems, onAllMoved: onRemoveAll)
-                    .padding(6)
+                AllDragHandle(
+                    items: sortedItems,
+                    onAllMoved: { if removeOnDragOut { onRemoveAll() } }
+                )
+                .padding(6)
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -83,6 +90,7 @@ public struct ShelfGridView: View {
 @MainActor
 struct ShelfGridCell: View {
     let item: ShelfItem
+    let removeOnDragOut: Bool
     let onOpen: () -> Void
     let onRemove: () -> Void
 
@@ -126,7 +134,9 @@ struct ShelfGridCell: View {
             withAnimation(.easeInOut(duration: 0.12)) { isHovering = hovering }
         }
         .overlay(
-            FileDragSourceView(url: item.shelfURL, onMoved: onRemove)
+            FileDragSourceView(url: item.shelfURL) { droppedOK in
+                if droppedOK, removeOnDragOut { onRemove() }
+            }
         )
         .contextMenu {
             Button("Open") { onOpen() }

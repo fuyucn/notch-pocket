@@ -4,13 +4,20 @@ import AppKit
 @MainActor
 public struct ShelfListRowView: View {
     public let item: ShelfItem
+    public let removeOnDragOut: Bool
     public let onOpen: () -> Void
     public let onRemove: () -> Void
 
     @State private var isHovering = false
 
-    public init(item: ShelfItem, onOpen: @escaping () -> Void, onRemove: @escaping () -> Void) {
+    public init(
+        item: ShelfItem,
+        removeOnDragOut: Bool = true,
+        onOpen: @escaping () -> Void,
+        onRemove: @escaping () -> Void
+    ) {
         self.item = item
+        self.removeOnDragOut = removeOnDragOut
         self.onOpen = onOpen
         self.onRemove = onRemove
     }
@@ -78,7 +85,9 @@ public struct ShelfListRowView: View {
             withAnimation(.easeInOut(duration: 0.12)) { isHovering = hovering }
         }
         .overlay(
-            FileDragSourceView(url: item.shelfURL, onMoved: onRemove)
+            FileDragSourceView(url: item.shelfURL) { droppedOK in
+                if droppedOK, removeOnDragOut { onRemove() }
+            }
         )
         .contextMenu {
             Button("Open") { onOpen() }
