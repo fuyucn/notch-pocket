@@ -33,6 +33,7 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
 
         let vm = NotchViewModel(geometry: geometry)
         vm.shelfCount = shelfManager.items.count
+        vm.shelfManager = shelfManager
         notchViewModel = vm
 
         let panel = NotchPanel(viewModel: vm)
@@ -73,6 +74,7 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
             guard let shelfManager else { return }
             controller?.updateFileCount(shelfManager.items.count)
             vm?.shelfCount = shelfManager.items.count
+            vm?.shelfRefreshToken &+= 1
         }
         statusBarController = controller
 

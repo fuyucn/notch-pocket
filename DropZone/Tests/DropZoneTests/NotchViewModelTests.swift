@@ -87,4 +87,21 @@ struct NotchViewModelTests {
         vm.updateMouseLocation(NSPoint(x: -500, y: -500), isDragging: false)
         #expect(vm.status == .closed)
     }
+
+    @Test @MainActor
+    func shelfManagerWeakReferenceCanBeSet() {
+        let vm = makeVM()
+        let tmp = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        let shelf = FileShelfManager(directory: tmp)
+        vm.shelfManager = shelf
+        #expect(vm.shelfManager === shelf)
+    }
+
+    @Test @MainActor
+    func shelfRefreshTokenStartsAtZeroAndIncrements() {
+        let vm = makeVM()
+        #expect(vm.shelfRefreshToken == 0)
+        vm.shelfRefreshToken &+= 1
+        #expect(vm.shelfRefreshToken == 1)
+    }
 }
