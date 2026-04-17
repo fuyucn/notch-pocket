@@ -162,9 +162,9 @@ struct DropZonePanelTests {
     @Test("shelfExpanded panel has correct target size constant")
     func shelfExpandedSize() {
         // Verify the static size constant is correct
-        let expectedSize = DropZonePanel.shelfExpandedSize
-        #expect(expectedSize.width == 420)
-        #expect(expectedSize.height == 100)
+        let expectedSize = NotchGeometry.shelfExpandedSize
+        #expect(expectedSize.width == 600)
+        #expect(expectedSize.height == 360)
 
         // expandShelf() starts with an inset frame and animates to targetFrame;
         // animations don't complete synchronously, so verify the panel entered

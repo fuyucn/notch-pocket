@@ -1,9 +1,11 @@
 import AppKit
+import SwiftUI
 
 /// The visual state of the DropZone panel (maps to DESIGN.md state machine).
 public enum PanelState: Sendable {
     case hidden
     case listening      // Invisible, waiting for drag to enter activation zone
+    case preActivated   // Drag entered the outer pre-activation rect (narrow bar visible)
     case expanded       // Drop zone visible, accepting drops
     case shelfExpanded  // Shelf UI visible, showing thumbnails (after drop or click)
     case collapsed      // Collapsing back after drag leaves without drop
@@ -52,6 +54,11 @@ public final class DropZonePanel: NSPanel {
 
     /// The file shelf view showing thumbnails of shelved files.
     public let fileShelfView = FileShelfView()
+
+    // MARK: - Pre-activation bar
+
+    /// SwiftUI host for the narrow pre-activation bar.
+    public let preActivationBarHost = NSHostingView(rootView: PreActivationBarView.empty)
 
     // MARK: - File count badge
 
@@ -127,6 +134,12 @@ public final class DropZonePanel: NSPanel {
         fileShelfView.isHidden = true
         contentView.addSubview(fileShelfView)
 
+        // Add pre-activation bar (hidden by default, shown only in preActivated state)
+        preActivationBarHost.frame = contentView.bounds
+        preActivationBarHost.autoresizingMask = [.width, .height]
+        preActivationBarHost.isHidden = true
+        contentView.addSubview(preActivationBarHost)
+
         // Add drag destination view on top — must be topmost to receive drag events
         dragDestinationView.frame = contentView.bounds
         dragDestinationView.autoresizingMask = [.width, .height]
@@ -138,11 +151,6 @@ public final class DropZonePanel: NSPanel {
     override public var canBecomeKey: Bool { true }
     override public var canBecomeMain: Bool { false }
 
-    // MARK: - Shelf expanded size
-
-    /// Size of the panel when showing the file shelf with thumbnails.
-    public static let shelfExpandedSize = NSSize(width: 420, height: 100)
-
     // MARK: - State transitions
 
     /// Transition to the expanded (drop zone visible) state.
@@ -152,8 +160,9 @@ public final class DropZonePanel: NSPanel {
 
         // Keep shelf hidden during drop-zone mode — only dragDestinationView should be active
         fileShelfView.isHidden = true
+        preActivationBarHost.isHidden = true
 
-        let targetSize = NotchGeometry.expandedSize
+        let targetSize = NotchGeometry.preActivatedSize
         let targetOrigin = geometry.panelOrigin(for: targetSize)
         let targetFrame = NSRect(origin: targetOrigin, size: targetSize)
 
@@ -170,6 +179,9 @@ public final class DropZonePanel: NSPanel {
             self.animator().setFrame(targetFrame, display: true)
             self.animator().alphaValue = 1
         }
+
+        // Ensure frame is at target size regardless of animation completion (important for tests)
+        setFrame(targetFrame, display: false)
     }
 
     /// Expand the panel to show the file shelf with thumbnails.
@@ -180,7 +192,7 @@ public final class DropZonePanel: NSPanel {
         fileShelfView.isHidden = false
         hideBadge()
 
-        let targetSize = Self.shelfExpandedSize
+        let targetSize = NotchGeometry.shelfExpandedSize
         let targetOrigin = geometry.panelOrigin(for: targetSize)
         let targetFrame = NSRect(origin: targetOrigin, size: targetSize)
 
@@ -236,6 +248,59 @@ public final class DropZonePanel: NSPanel {
         panelState = .listening
         // Panel stays ordered out — we only track mouse/drag position
         // via ScreenDetector / global drag monitor
+    }
+
+    /// Enter the pre-activated (narrow bar) state from `.listening`.
+    public func enterPreActivation(primaryFileName: String?, extraCount: Int, shelfCount: Int) {
+        guard panelState == .listening || panelState == .preActivated else { return }
+
+        preActivationBarHost.rootView = PreActivationBarView(
+            primaryFileName: primaryFileName,
+            extraCount: max(0, extraCount),
+            shelfCount: max(0, shelfCount)
+        )
+        preActivationBarHost.isHidden = false
+
+        panelState = .preActivated
+
+        let targetSize = NotchGeometry.preActivatedSize
+        let targetOrigin = geometry.panelOrigin(for: targetSize)
+        let targetFrame = NSRect(origin: targetOrigin, size: targetSize)
+
+        if !isVisible {
+            alphaValue = 0
+            setFrame(targetFrame.insetBy(dx: 15, dy: 6), display: false)
+            orderFrontRegardless()
+        }
+
+        NSAnimationContext.runAnimationGroup { context in
+            context.duration = Self.expandDuration * 0.6
+            context.timingFunction = CAMediaTimingFunction(controlPoints: 0.22, 1.0, 0.36, 1.0)
+            context.allowsImplicitAnimation = true
+            self.animator().setFrame(targetFrame, display: true)
+            self.animator().alphaValue = 1
+        }
+
+        // Ensure frame is at target size regardless of animation completion (important for tests)
+        setFrame(targetFrame, display: false)
+    }
+
+    /// Leave pre-activated state.
+    public func exitPreActivation() {
+        guard panelState == .preActivated else { return }
+        preActivationBarHost.isHidden = true
+        panelState = .listening
+        if isVisible {
+            NSAnimationContext.runAnimationGroup({ context in
+                context.duration = Self.collapseDuration
+                context.timingFunction = CAMediaTimingFunction(name: .easeIn)
+                self.animator().alphaValue = 0
+            }, completionHandler: { [weak self] in
+                MainActor.assumeIsolated {
+                    self?.orderOut(nil)
+                }
+            })
+        }
     }
 
     /// Return to hidden state.
@@ -335,12 +400,16 @@ public final class DropZonePanel: NSPanel {
         case .hidden, .listening, .collapsed:
             // No visible change needed
             break
+        case .preActivated:
+            let targetSize = NotchGeometry.preActivatedSize
+            let targetOrigin = geometry.panelOrigin(for: targetSize)
+            setFrame(NSRect(origin: targetOrigin, size: targetSize), display: true)
         case .expanded:
-            let targetSize = NotchGeometry.expandedSize
+            let targetSize = NotchGeometry.preActivatedSize
             let targetOrigin = geometry.panelOrigin(for: targetSize)
             setFrame(NSRect(origin: targetOrigin, size: targetSize), display: true)
         case .shelfExpanded:
-            let targetSize = Self.shelfExpandedSize
+            let targetSize = NotchGeometry.shelfExpandedSize
             let targetOrigin = geometry.panelOrigin(for: targetSize)
             setFrame(NSRect(origin: targetOrigin, size: targetSize), display: true)
         }
