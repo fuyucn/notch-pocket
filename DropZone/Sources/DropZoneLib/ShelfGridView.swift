@@ -58,14 +58,28 @@ private struct ShelfGridCell: View {
     let onOpen: () -> Void
     let onRemove: () -> Void
 
+    @State private var isHovering = false
+
     var body: some View {
         VStack(spacing: 6) {
-            ZStack {
+            ZStack(alignment: .topTrailing) {
                 RoundedRectangle(cornerRadius: 8, style: .continuous)
                     .fill(Color.white.opacity(0.08))
                 Image(systemName: iconName)
                     .font(.system(size: 28))
                     .foregroundStyle(.white.opacity(0.85))
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                if isHovering {
+                    Button(action: onRemove) {
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.system(size: 16))
+                            .symbolRenderingMode(.palette)
+                            .foregroundStyle(.white, Color.black.opacity(0.8))
+                    }
+                    .buttonStyle(.plain)
+                    .padding(4)
+                    .transition(.opacity)
+                }
             }
             .frame(width: 60, height: 60)
             Text(item.displayName)
@@ -78,6 +92,9 @@ private struct ShelfGridCell: View {
         }
         .frame(width: 90)
         .contentShape(Rectangle())
+        .onHover { hovering in
+            withAnimation(.easeInOut(duration: 0.12)) { isHovering = hovering }
+        }
         .contextMenu {
             Button("Open") { onOpen() }
             Button("Remove", role: .destructive) { onRemove() }

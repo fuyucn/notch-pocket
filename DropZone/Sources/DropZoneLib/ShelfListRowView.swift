@@ -7,6 +7,8 @@ public struct ShelfListRowView: View {
     public let onOpen: () -> Void
     public let onRemove: () -> Void
 
+    @State private var isHovering = false
+
     public init(item: ShelfItem, onOpen: @escaping () -> Void, onRemove: @escaping () -> Void) {
         self.item = item
         self.onOpen = onOpen
@@ -58,10 +60,23 @@ public struct ShelfListRowView: View {
                         .background(Capsule().fill(Color.white.opacity(0.12)))
                 }
             }
+
+            Button(action: onRemove) {
+                Image(systemName: "xmark.circle.fill")
+                    .font(.system(size: 14))
+                    .symbolRenderingMode(.palette)
+                    .foregroundStyle(.white.opacity(0.9), Color.black.opacity(0.6))
+            }
+            .buttonStyle(.plain)
+            .opacity(isHovering ? 1 : 0)
+            .padding(.leading, 2)
         }
         .padding(.horizontal, 14)
         .frame(height: 44)
         .contentShape(Rectangle())
+        .onHover { hovering in
+            withAnimation(.easeInOut(duration: 0.12)) { isHovering = hovering }
+        }
         .contextMenu {
             Button("Open") { onOpen() }
             Button("Remove", role: .destructive) { onRemove() }
