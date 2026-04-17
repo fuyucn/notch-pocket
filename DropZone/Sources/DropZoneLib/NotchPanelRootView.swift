@@ -177,8 +177,8 @@ public struct NotchPanelRootView: View {
                         )
                     }
                 }
-                .padding(.horizontal, 8)
-                .padding(.bottom, 8)
+                .padding(.horizontal, 20)
+                .padding(.bottom, 16)
             }
             .frame(width: size.width, height: size.height)
             .clipShape(NotchShape(topCornerRadius: targetTopRadius, bottomCornerRadius: targetBottomRadius))

@@ -59,8 +59,8 @@ public struct ShelfListRowView: View {
                 }
             }
         }
-        .padding(.horizontal, 12)
-        .frame(height: 42)
+        .padding(.horizontal, 14)
+        .frame(height: 44)
         .contentShape(Rectangle())
         .contextMenu {
             Button("Open") { onOpen() }
