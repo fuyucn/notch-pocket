@@ -17,8 +17,9 @@ public final class HoverDetectionPanel: NSPanel {
     private let trackingView = HoverTrackingView()
 
     public init(geometry: NotchGeometry) {
-        // Use the pre-activation rect for the detection area (activation zone + 8px hysteresis outset).
-        let rect = geometry.preActivationRect
+        // Use the pre-activation rect outset by 20px so the panel edges extend beyond the
+        // DropZonePanel boundary — prevents mouseExited firing when DropZonePanel overlaps.
+        let rect = geometry.preActivationRect.insetBy(dx: -20, dy: -20)
         super.init(
             contentRect: rect,
             styleMask: [.nonactivatingPanel, .borderless, .fullSizeContentView],
@@ -26,7 +27,7 @@ public final class HoverDetectionPanel: NSPanel {
             defer: false
         )
         isFloatingPanel = true
-        level = .statusBar
+        level = .screenSaver  // Above .popUpMenu used by DropZonePanel — prevents flicker
         collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary]
         isOpaque = false
         backgroundColor = .clear
@@ -40,12 +41,12 @@ public final class HoverDetectionPanel: NSPanel {
         trackingView.owner = self
         contentView = trackingView
 
-        setFrame(rect, display: false)
+        setFrame(geometry.preActivationRect.insetBy(dx: -20, dy: -20), display: false)
         orderFrontRegardless()
     }
 
     public func updateGeometry(_ geometry: NotchGeometry) {
-        setFrame(geometry.preActivationRect, display: true)
+        setFrame(geometry.preActivationRect.insetBy(dx: -20, dy: -20), display: true)
     }
 
     // Delegate invocation helpers called by the tracking view
@@ -73,12 +74,22 @@ private final class HoverTrackingView: NSView {
     weak var owner: HoverDetectionPanel?
     private var trackingArea: NSTrackingArea?
 
+    override func viewDidMoveToWindow() {
+        super.viewDidMoveToWindow()
+        // Register as a drag destination so tracking fires during drag sessions.
+        // NSTrackingArea alone doesn't fire mouseEntered/mouseExited during a drag.
+        registerForDraggedTypes([
+            .fileURL,
+            NSPasteboard.PasteboardType("com.apple.NSFilePromiseItemMetaData")
+        ])
+    }
+
     override func updateTrackingAreas() {
         super.updateTrackingAreas()
         if let area = trackingArea { removeTrackingArea(area) }
         let area = NSTrackingArea(
             rect: bounds,
-            options: [.mouseEnteredAndExited, .activeAlways, .inVisibleRect],
+            options: [.mouseEnteredAndExited, .activeAlways, .inVisibleRect, .assumeInside],
             owner: self,
             userInfo: nil
         )
@@ -88,4 +99,15 @@ private final class HoverTrackingView: NSView {
 
     override func mouseEntered(with event: NSEvent) { owner?.deliverEntered() }
     override func mouseExited(with event: NSEvent) { owner?.deliverExited() }
+
+    // MARK: - NSDraggingDestination (drag-session hover detection)
+
+    override func draggingEntered(_ sender: any NSDraggingInfo) -> NSDragOperation {
+        owner?.deliverEntered()
+        return []  // We don't accept drops — DropZonePanel handles that.
+    }
+
+    override func draggingExited(_ sender: (any NSDraggingInfo)?) {
+        owner?.deliverExited()
+    }
 }
