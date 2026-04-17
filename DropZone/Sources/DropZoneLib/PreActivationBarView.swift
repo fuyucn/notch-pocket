@@ -7,18 +7,22 @@ public struct PreActivationBarView: View {
     public let primaryFileName: String?
     public let extraCount: Int
     public let shelfCount: Int
+    /// Vertical inset applied at the top so the content sits below the physical
+    /// notch cutout (notch height + small padding). Defaults to 40 for previews.
+    public let notchInset: CGFloat
 
     public static let empty = PreActivationBarView(primaryFileName: nil, extraCount: 0, shelfCount: 0)
 
-    public init(primaryFileName: String?, extraCount: Int, shelfCount: Int) {
+    public init(primaryFileName: String?, extraCount: Int, shelfCount: Int, notchInset: CGFloat = 40) {
         self.primaryFileName = primaryFileName
         self.extraCount = extraCount
         self.shelfCount = shelfCount
+        self.notchInset = notchInset
     }
 
     public var body: some View {
         VStack(spacing: 6) {
-            Spacer().frame(height: 36)   // sit below the physical notch cutout
+            Spacer().frame(height: notchInset)   // sit below the physical notch cutout
             Image(systemName: "tray.and.arrow.down.fill")
                 .font(.system(size: 22, weight: .medium))
                 .foregroundStyle(.white.opacity(0.9))

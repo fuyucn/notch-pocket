@@ -65,7 +65,8 @@ public struct NotchPanelRootView: View {
             PreActivationBarView(
                 primaryFileName: viewModel.primaryFileName,
                 extraCount: viewModel.extraCount,
-                shelfCount: viewModel.shelfCount
+                shelfCount: viewModel.shelfCount,
+                notchInset: (viewModel.geometry.notchRect?.height ?? 32) + 8
             )
             .frame(
                 width: viewModel.geometry.preActivatedPanelSize.width,
@@ -82,8 +83,9 @@ public struct NotchPanelRootView: View {
         if let shelfManager = viewModel.shelfManager {
             let mode = viewModel.settingsManager?.shelfViewMode ?? .list
             let size = viewModel.geometry.openedPanelSize
+            let notchHeight = viewModel.geometry.notchRect?.height ?? 32
             VStack(spacing: 0) {
-                Spacer().frame(height: 36) // below notch cutout
+                Spacer().frame(height: notchHeight + 8) // content starts just below notch cutout
                 ShelfHeaderView(
                     itemCount: shelfManager.items.count,
                     viewMode: mode,
