@@ -19,14 +19,18 @@ public final class GlobalDragMonitor {
 
     // MARK: - Callbacks
 
-    /// Called when a file drag enters the activation zone.
-    public var onDragEnteredZone: (@MainActor () -> Void)?
-    /// Called when a file drag exits the activation zone.
-    public var onDragExitedZone: (@MainActor () -> Void)?
+    /// Called when a file drag enters the activation zone for a given display.
+    public var onDragEnteredZone: (@MainActor (_ displayID: CGDirectDisplayID) -> Void)?
+    /// Called when a file drag exits the activation zone for a given display.
+    public var onDragExitedZone: (@MainActor (_ displayID: CGDirectDisplayID) -> Void)?
     /// Called when a system-wide drag session begins (any file drag).
     public var onDragBegan: (@MainActor () -> Void)?
     /// Called when a system-wide drag session ends.
     public var onDragEnded: (@MainActor () -> Void)?
+    /// Fired when the drag cursor enters a screen's pre-activation rect (outer ring).
+    public var onPreActivationEntered: (@MainActor (_ displayID: CGDirectDisplayID, _ fileNames: [String]) -> Void)?
+    /// Fired when the cursor leaves the pre-activation rect.
+    public var onPreActivationExited: (@MainActor (_ displayID: CGDirectDisplayID) -> Void)?
 
     // MARK: - State
 
@@ -34,8 +38,16 @@ public final class GlobalDragMonitor {
     public private(set) var isDragActive: Bool = false
     /// Whether the drag cursor is currently inside the activation zone.
     public private(set) var isInsideZone: Bool = false
+    /// Display ID of the screen whose activation zone the cursor is in (nil if none).
+    public private(set) var activeDisplayID: CGDirectDisplayID?
     /// Current geometry used for activation zone hit testing.
     public var geometry: NotchGeometry
+    /// Per-display geometries for multi-display support.
+    public var allGeometries: [CGDirectDisplayID: NotchGeometry] = [:]
+    /// Whether the cursor is inside the *pre*-activation rect (outer ring).
+    public private(set) var isInsidePreActivation: Bool = false
+    /// Display ID of the screen whose pre-activation rect the cursor is in (nil if none).
+    public private(set) var preActivationDisplayID: CGDirectDisplayID?
 
     // MARK: - Monitors
 
@@ -119,9 +131,45 @@ public final class GlobalDragMonitor {
         )
     }
 
+    /// Expand the activation zone for a specific geometry with extra drag proximity padding.
+    private func dragActivationZone(for geo: NotchGeometry) -> NSRect {
+        let zone = geo.activationZone
+        return NSRect(
+            x: zone.origin.x - Self.dragProximityPadding,
+            y: zone.origin.y - Self.dragProximityPadding,
+            width: zone.width + Self.dragProximityPadding * 2,
+            height: zone.height + Self.dragProximityPadding
+        )
+    }
+
     /// Test whether a screen-coordinate point is inside the drag activation zone.
     public func isPointInActivationZone(_ point: NSPoint) -> Bool {
         dragActivationZone().contains(point)
+    }
+
+    /// Which screen's activation zone (with drag padding) contains the point.
+    private func displayIDForPoint(_ point: NSPoint) -> CGDirectDisplayID? {
+        for (displayID, geo) in allGeometries {
+            if dragActivationZone(for: geo).contains(point) { return displayID }
+        }
+        return nil
+    }
+
+    /// Which screen's *pre-activation* rect contains the point.
+    private func preActivationDisplayIDForPoint(_ point: NSPoint) -> CGDirectDisplayID? {
+        for (displayID, geo) in allGeometries {
+            if geo.preActivationRect.contains(point) { return displayID }
+        }
+        return nil
+    }
+
+    /// Read filenames from the drag pasteboard.
+    private func currentDragFileNames() -> [String] {
+        let pb = NSPasteboard(name: .drag)
+        if let urls = pb.readObjects(forClasses: [NSURL.self], options: [.urlReadingFileURLsOnly: true]) as? [URL] {
+            return urls.map { $0.lastPathComponent }
+        }
+        return []
     }
 
     // MARK: - Event handling
@@ -194,14 +242,46 @@ public final class GlobalDragMonitor {
 
     private func pollMousePosition() {
         let mouseLocation = NSEvent.mouseLocation
-        let inZone = isPointInActivationZone(mouseLocation)
+        let fileNames = currentDragFileNames()
+        processPointerForTesting(mouseLocation, fileNames: fileNames)
+    }
 
-        if inZone && !isInsideZone {
-            isInsideZone = true
-            onDragEnteredZone?()
-        } else if !inZone && isInsideZone {
+    /// Visible-to-tests entry point. Separates geometry/state logic from system APIs.
+    public func processPointerForTesting(_ point: NSPoint, fileNames: [String]) {
+        // --- Pre-activation (outer) ring ---
+        let preHitID = preActivationDisplayIDForPoint(point)
+        if let hitID = preHitID {
+            if !isInsidePreActivation || preActivationDisplayID != hitID {
+                if isInsidePreActivation, let prev = preActivationDisplayID, prev != hitID {
+                    onPreActivationExited?(prev)
+                }
+                isInsidePreActivation = true
+                preActivationDisplayID = hitID
+                onPreActivationEntered?(hitID, fileNames)
+            }
+        } else if isInsidePreActivation {
+            if let prev = preActivationDisplayID { onPreActivationExited?(prev) }
+            isInsidePreActivation = false
+            preActivationDisplayID = nil
+        }
+
+        // --- Inner activation zone (existing behaviour) ---
+        let hitDisplayID = displayIDForPoint(point)
+        if let hitID = hitDisplayID {
+            if !isInsideZone || activeDisplayID != hitID {
+                if isInsideZone, let prevID = activeDisplayID, prevID != hitID {
+                    onDragExitedZone?(prevID)
+                }
+                isInsideZone = true
+                activeDisplayID = hitID
+                onDragEnteredZone?(hitID)
+            }
+        } else if isInsideZone {
+            if let prevID = activeDisplayID {
+                onDragExitedZone?(prevID)
+            }
             isInsideZone = false
-            onDragExitedZone?()
+            activeDisplayID = nil
         }
     }
 
@@ -210,5 +290,8 @@ public final class GlobalDragMonitor {
     private func resetState() {
         isDragActive = false
         isInsideZone = false
+        activeDisplayID = nil
+        isInsidePreActivation = false
+        preActivationDisplayID = nil
     }
 }

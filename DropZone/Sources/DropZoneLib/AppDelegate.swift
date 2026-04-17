@@ -188,14 +188,14 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         // When the drag cursor enters the activation zone, expand the panel
-        monitor.onDragEnteredZone = { [weak panel] in
+        monitor.onDragEnteredZone = { [weak panel] _ in
             if panel?.panelState == .listening {
                 panel?.expand()
             }
         }
 
         // When the drag cursor leaves the activation zone, collapse if not dropped
-        monitor.onDragExitedZone = { [weak panel] in
+        monitor.onDragExitedZone = { [weak panel] _ in
             if panel?.panelState == .expanded {
                 panel?.collapse()
             }

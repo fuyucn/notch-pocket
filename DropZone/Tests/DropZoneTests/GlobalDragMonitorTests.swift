@@ -120,8 +120,8 @@ struct GlobalDragMonitorTests {
         nonisolated(unsafe) var began = false
         nonisolated(unsafe) var ended = false
 
-        monitor.onDragEnteredZone = { entered = true }
-        monitor.onDragExitedZone = { exited = true }
+        monitor.onDragEnteredZone = { _ in entered = true }
+        monitor.onDragExitedZone = { _ in exited = true }
         monitor.onDragBegan = { began = true }
         monitor.onDragEnded = { ended = true }
 
@@ -209,5 +209,66 @@ struct GlobalDragMonitorTests {
         #expect(monitor.isPointInActivationZone(NSPoint(x: 960, y: 1044)))
         // Well outside
         #expect(!monitor.isPointInActivationZone(NSPoint(x: 100, y: 100)))
+    }
+
+    // MARK: - Pre-activation threshold
+
+    @Test @MainActor
+    func onPreActivationEnterFiresBeforeActivation() {
+        let screen = NSRect(x: 0, y: 0, width: 1000, height: 800)
+        let notch = NSRect(x: 400, y: 768, width: 200, height: 32)
+        let activation = NSRect(x: 370, y: 708, width: 260, height: 102)
+        let geo = NotchGeometry(notchRect: notch, activationZone: activation, screenFrame: screen, hasNotch: true)
+
+        let monitor = GlobalDragMonitor(geometry: geo)
+        monitor.allGeometries = [1: geo]
+
+        var entered: (CGDirectDisplayID, [String])?
+        var exited: CGDirectDisplayID?
+        monitor.onPreActivationEntered = { id, names in entered = (id, names) }
+        monitor.onPreActivationExited = { id in exited = id }
+
+        // A point just inside the pre-activation rect but outside activation proper
+        let pointInPre = NSPoint(x: activation.minX - 4, y: activation.minY - 4)
+        monitor.processPointerForTesting(pointInPre, fileNames: ["a.pdf", "b.pdf"])
+        #expect(entered?.0 == 1)
+        #expect(entered?.1 == ["a.pdf", "b.pdf"])
+
+        // Moving the cursor far away exits
+        monitor.processPointerForTesting(NSPoint(x: 0, y: 0), fileNames: [])
+        #expect(exited == 1)
+    }
+
+    @Test @MainActor
+    func onDragEnteredZoneStillFiresForActivationPoint() {
+        let screen = NSRect(x: 0, y: 0, width: 1000, height: 800)
+        let notch = NSRect(x: 400, y: 768, width: 200, height: 32)
+        let activation = NSRect(x: 370, y: 708, width: 260, height: 102)
+        let geo = NotchGeometry(notchRect: notch, activationZone: activation, screenFrame: screen, hasNotch: true)
+
+        let monitor = GlobalDragMonitor(geometry: geo)
+        monitor.allGeometries = [1: geo]
+
+        var zoneEntered: CGDirectDisplayID?
+        monitor.onDragEnteredZone = { id in zoneEntered = id }
+
+        monitor.processPointerForTesting(NSPoint(x: activation.midX, y: activation.midY), fileNames: ["c.txt"])
+        #expect(zoneEntered == 1)
+    }
+
+    @Test @MainActor
+    func fileNamesReadsFromSuppliedArray() {
+        let screen = NSRect(x: 0, y: 0, width: 1000, height: 800)
+        let notch = NSRect(x: 400, y: 768, width: 200, height: 32)
+        let activation = NSRect(x: 370, y: 708, width: 260, height: 102)
+        let geo = NotchGeometry(notchRect: notch, activationZone: activation, screenFrame: screen, hasNotch: true)
+        let monitor = GlobalDragMonitor(geometry: geo)
+        monitor.allGeometries = [9: geo]
+
+        var captured: [String] = []
+        monitor.onPreActivationEntered = { _, names in captured = names }
+        monitor.processPointerForTesting(NSPoint(x: activation.minX - 2, y: activation.minY - 2),
+                                         fileNames: ["only.jpg"])
+        #expect(captured == ["only.jpg"])
     }
 }
