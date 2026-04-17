@@ -32,6 +32,32 @@ public struct NotchGeometry: Sendable {
     public static let preActivationOutset: CGFloat = 8
     /// Corner radius matching the notch shape.
     public static let cornerRadius: CGFloat = 18
+    /// Horizontal padding on each side of the notch used by the popping/opened
+    /// panel shape. Makes the panel visibly "wrap" the notch.
+    public static let sidePadding: CGFloat = 80
+
+    // MARK: - Computed panel sizes
+
+    /// Panel size in the popping (pre-activation) state.
+    /// Width = notch + sidePadding*2, height = matches existing preActivatedSize.height.
+    public var preActivatedPanelSize: NSSize {
+        let notchWidth = notchRect?.width ?? 200
+        return NSSize(
+            width: notchWidth + Self.sidePadding * 2,
+            height: Self.preActivatedSize.height
+        )
+    }
+
+    /// Panel size in the opened state. Wider than popping to fit shelf content.
+    /// Width = notch + sidePadding*6 (default ~720 for 200-wide notch),
+    /// height = matches existing shelfExpandedSize.height.
+    public var openedPanelSize: NSSize {
+        let notchWidth = notchRect?.width ?? 200
+        return NSSize(
+            width: notchWidth + Self.sidePadding * 6,
+            height: Self.shelfExpandedSize.height
+        )
+    }
 
     // MARK: - Init
 

@@ -299,4 +299,48 @@ struct NotchGeometryTests {
         #expect(origin.x == notch.midX - NotchGeometry.preActivatedSize.width / 2)
         #expect(origin.y == notch.maxY - NotchGeometry.preActivatedSize.height)
     }
+
+    // MARK: - Computed panel sizes
+
+    @Test
+    func preActivatedPanelSizeIsNotchWidthPlusDoubleSidePadding() {
+        let screen = NSRect(x: 0, y: 0, width: 1600, height: 1000)
+        let notch = NSRect(x: 700, y: 968, width: 200, height: 32)
+        let geo = NotchGeometry(
+            notchRect: notch,
+            activationZone: NSRect(x: 670, y: 908, width: 260, height: 102),
+            screenFrame: screen,
+            hasNotch: true
+        )
+        let expectedWidth = notch.width + NotchGeometry.sidePadding * 2
+        #expect(geo.preActivatedPanelSize.width == expectedWidth)
+        #expect(geo.preActivatedPanelSize.height == NotchGeometry.preActivatedSize.height)
+    }
+
+    @Test
+    func openedPanelSizeIsWiderThanPoppingSize() {
+        let screen = NSRect(x: 0, y: 0, width: 1600, height: 1000)
+        let notch = NSRect(x: 700, y: 968, width: 200, height: 32)
+        let geo = NotchGeometry(
+            notchRect: notch,
+            activationZone: NSRect(x: 670, y: 908, width: 260, height: 102),
+            screenFrame: screen,
+            hasNotch: true
+        )
+        #expect(geo.openedPanelSize.width > geo.preActivatedPanelSize.width)
+        #expect(geo.openedPanelSize.height == NotchGeometry.shelfExpandedSize.height)
+    }
+
+    @Test
+    func preActivatedPanelSizeFallsBackWhenNoNotch() {
+        let screen = NSRect(x: 0, y: 0, width: 1600, height: 1000)
+        let geo = NotchGeometry(
+            notchRect: nil,
+            activationZone: NSRect(x: 770, y: 950, width: 60, height: 25),
+            screenFrame: screen,
+            hasNotch: false
+        )
+        // Fallback notch width is 200.
+        #expect(geo.preActivatedPanelSize.width == 200 + NotchGeometry.sidePadding * 2)
+    }
 }

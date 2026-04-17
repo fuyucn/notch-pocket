@@ -28,12 +28,13 @@ public struct NotchPanelRootView: View {
 
     @ViewBuilder
     private var poppingContent: some View {
+        let size = viewModel.geometry.preActivatedPanelSize
         PreActivationBarView(
             primaryFileName: viewModel.primaryFileName,
             extraCount: viewModel.extraCount,
             shelfCount: viewModel.shelfCount
         )
-        .frame(width: NotchGeometry.preActivatedSize.width, height: NotchGeometry.preActivatedSize.height)
+        .frame(width: size.width, height: size.height)
         .background(
             RoundedRectangle(cornerRadius: 28, style: .continuous)
                 .fill(Color.black.opacity(0.88))
@@ -47,8 +48,9 @@ public struct NotchPanelRootView: View {
 
     @ViewBuilder
     private var openedContent: some View {
+        let size = viewModel.geometry.openedPanelSize
         OpenedShelfPlaceholderView()
-            .frame(width: NotchGeometry.shelfExpandedSize.width, height: NotchGeometry.shelfExpandedSize.height)
+            .frame(width: size.width, height: size.height)
             .background(
                 RoundedRectangle(cornerRadius: 28, style: .continuous)
                     .fill(Color.black.opacity(0.92))
