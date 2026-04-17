@@ -18,17 +18,29 @@ public final class NotchDropForwarder: NSView {
     public override func hitTest(_ point: NSPoint) -> NSView? { nil }
 
     public override func draggingEntered(_ sender: any NSDraggingInfo) -> NSDragOperation {
+        guard Self.pasteboardHasFileURLs(sender.draggingPasteboard) else {
+            // Not a file drag — ignore, don't show pre-activation UI.
+            return []
+        }
         let names = Self.readFileNames(from: sender.draggingPasteboard)
         onDraggingChanged?(true, names)
         return .copy
     }
 
     public override func draggingUpdated(_ sender: any NSDraggingInfo) -> NSDragOperation {
-        .copy
+        Self.pasteboardHasFileURLs(sender.draggingPasteboard) ? .copy : []
     }
 
     public override func draggingExited(_ sender: (any NSDraggingInfo)?) {
         onDraggingChanged?(false, [])
+    }
+
+    /// Check pasteboard for at least one readable file URL. AppKit will
+    /// register drags for many non-file transfers (window drags, arbitrary
+    /// URLs, text with embedded URL metadata) that announce
+    /// `NSPasteboard.PasteboardType.fileURL` but don't actually carry one.
+    static func pasteboardHasFileURLs(_ pb: NSPasteboard) -> Bool {
+        !readURLs(from: pb).isEmpty
     }
 
     public override func performDragOperation(_ sender: any NSDraggingInfo) -> Bool {
