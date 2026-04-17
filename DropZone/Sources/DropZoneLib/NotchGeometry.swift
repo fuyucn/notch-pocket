@@ -24,6 +24,12 @@ public struct NotchGeometry: Sendable {
     public static let fallbackPillSize = NSSize(width: 200, height: 32)
     /// Expanded drop zone size.
     public static let expandedSize = NSSize(width: 320, height: 80)
+    /// Narrow pre-activation bar displayed when the cursor enters the pre-activation zone.
+    public static let preActivatedSize = NSSize(width: 380, height: 60)
+    /// Full shelf panel size (list view / thumbnail view).
+    public static let shelfExpandedSize = NSSize(width: 600, height: 360)
+    /// Hysteresis outset (px) between the pre-activation rect and the activation zone.
+    public static let preActivationOutset: CGFloat = 8
     /// Corner radius matching the notch shape.
     public static let cornerRadius: CGFloat = 18
 
@@ -95,6 +101,13 @@ public struct NotchGeometry: Sendable {
     /// Whether a point (in screen coordinates) is inside the activation zone.
     public func containsPoint(_ point: NSPoint) -> Bool {
         activationZone.contains(point)
+    }
+
+    /// The pre-activation rect = `activationZone` grown by `preActivationOutset` on every side.
+    /// The drag enters pre-activation when the cursor crosses this outer rect; it exits only
+    /// when the cursor leaves `activationZone` proper (providing hysteresis against flicker).
+    public var preActivationRect: NSRect {
+        activationZone.insetBy(dx: -Self.preActivationOutset, dy: -Self.preActivationOutset)
     }
 
     // MARK: - Private

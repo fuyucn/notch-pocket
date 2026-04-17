@@ -231,4 +231,42 @@ struct NotchGeometryTests {
         nonisolated(unsafe) let captured = geometry
         #expect(captured.hasNotch == false)
     }
+
+    // MARK: - Pre-activation constants and rect
+
+    @Test
+    func preActivatedSizeIs380x60() {
+        #expect(NotchGeometry.preActivatedSize == NSSize(width: 380, height: 60))
+    }
+
+    @Test
+    func shelfExpandedSizeIs600x360() {
+        #expect(NotchGeometry.shelfExpandedSize == NSSize(width: 600, height: 360))
+    }
+
+    @Test
+    func preActivationRectIsActivationZoneOutsetBy8Px() {
+        let screen = NSRect(x: 0, y: 0, width: 1000, height: 800)
+        let notch = NSRect(x: 400, y: 768, width: 200, height: 32)
+        let activation = NSRect(x: 370, y: 708, width: 260, height: 102)
+        let geo = NotchGeometry(notchRect: notch, activationZone: activation, screenFrame: screen, hasNotch: true)
+
+        let pre = geo.preActivationRect
+        #expect(pre.minX == activation.minX - 8)
+        #expect(pre.minY == activation.minY - 8)
+        #expect(pre.width == activation.width + 16)
+        #expect(pre.height == activation.height + 16)
+    }
+
+    @Test
+    func panelOriginCentersPreActivatedBarUnderNotch() {
+        let screen = NSRect(x: 0, y: 0, width: 1000, height: 800)
+        let notch = NSRect(x: 400, y: 768, width: 200, height: 32)
+        let activation = NSRect(x: 370, y: 708, width: 260, height: 102)
+        let geo = NotchGeometry(notchRect: notch, activationZone: activation, screenFrame: screen, hasNotch: true)
+
+        let origin = geo.panelOrigin(for: NotchGeometry.preActivatedSize)
+        #expect(origin.x == notch.midX - NotchGeometry.preActivatedSize.width / 2)
+        #expect(origin.y == notch.maxY - NotchGeometry.preActivatedSize.height)
+    }
 }
