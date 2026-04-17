@@ -73,6 +73,7 @@ struct NotchViewModelTests {
     @Test @MainActor
     func forceCloseResetsStatus() {
         let vm = makeVM()
+        vm.isFileDragging = true
         vm.updateMouseLocation(NSPoint(x: 800, y: 950), isDragging: true)
         #expect(vm.status == .opened)
         vm.forceClose()
