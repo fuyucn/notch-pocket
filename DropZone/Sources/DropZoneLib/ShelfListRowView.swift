@@ -85,12 +85,8 @@ public struct ShelfListRowView: View {
             withAnimation(.easeInOut(duration: 0.12)) { isHovering = hovering }
         }
         .overlay(
-            FileDragSourceView(url: item.shelfURL) { operation in
-                let success = !operation.isEmpty
-                let wasMove = operation.contains(.move) || operation.contains(.generic)
-                if success, removeOnDragOut, wasMove {
-                    onRemove()
-                }
+            FileDragSourceView(url: item.shelfURL) {
+                if removeOnDragOut { onRemove() }
             }
         )
         .contextMenu {

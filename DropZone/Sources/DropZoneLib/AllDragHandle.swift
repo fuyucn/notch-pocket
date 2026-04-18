@@ -10,22 +10,22 @@ import UniformTypeIdentifiers
 @MainActor
 public struct AllDragHandle: View {
     public let items: [ShelfItem]
-    /// Called after the drop ends with the resolved operation (copy / move /
-    /// generic, or `[]` if cancelled). Caller decides shelf-side behavior.
-    public let onDragEnded: (_ operation: NSDragOperation) -> Void
+    /// Called once after every file in the drag has been delivered to the
+    /// receiver. Caller decides shelf-side behavior (remove all / keep).
+    public let onAllDelivered: () -> Void
 
     public init(
         items: [ShelfItem],
-        onDragEnded: @escaping (_ operation: NSDragOperation) -> Void = { _ in }
+        onAllDelivered: @escaping () -> Void = {}
     ) {
         self.items = items
-        self.onDragEnded = onDragEnded
+        self.onAllDelivered = onAllDelivered
     }
 
     public var body: some View {
         MultiFileDragSourceView(
             urls: items.map { $0.shelfURL },
-            onDragEnded: onDragEnded
+            onAllDelivered: onAllDelivered
         )
         .frame(width: 44, height: 22)
         .overlay(
@@ -48,25 +48,29 @@ public struct AllDragHandle: View {
 @MainActor
 private struct MultiFileDragSourceView: NSViewRepresentable {
     let urls: [URL]
-    let onDragEnded: (NSDragOperation) -> Void
+    let onAllDelivered: () -> Void
 
     func makeNSView(context: Context) -> DragSourceNSView {
         let v = DragSourceNSView()
         v.urls = urls
-        v.onDragEnded = onDragEnded
+        v.onAllDelivered = onAllDelivered
         return v
     }
 
     func updateNSView(_ nsView: DragSourceNSView, context: Context) {
         nsView.urls = urls
-        nsView.onDragEnded = onDragEnded
+        nsView.onAllDelivered = onAllDelivered
     }
 }
 
 @MainActor
 private final class DragSourceNSView: NSView, NSDraggingSource, NSFilePromiseProviderDelegate {
     var urls: [URL] = []
-    var onDragEnded: (NSDragOperation) -> Void = { _ in }
+    var onAllDelivered: () -> Void = {}
+    /// Bumped on each successful `writePromiseTo`. When it matches the
+    /// current session's expected count, we fire `onAllDelivered` once.
+    private var deliveredCount: Int = 0
+    private var expectedCount: Int = 0
 
     private let ioQueue: OperationQueue = {
         let q = OperationQueue()
@@ -86,6 +90,9 @@ private final class DragSourceNSView: NSView, NSDraggingSource, NSFilePromisePro
             super.mouseDown(with: event)
             return
         }
+
+        deliveredCount = 0
+        expectedCount = urls.count
 
         let items = urls.map { url -> NSDraggingItem in
             let utType = (try? url.resourceValues(forKeys: [.contentTypeKey]))?.contentType
@@ -110,15 +117,7 @@ private final class DragSourceNSView: NSView, NSDraggingSource, NSFilePromisePro
         return [.copy, .move, .generic]
     }
 
-    nonisolated func draggingSession(
-        _ session: NSDraggingSession,
-        endedAt screenPoint: NSPoint,
-        operation: NSDragOperation
-    ) {
-        Task { @MainActor [weak self] in
-            self?.onDragEnded(operation)
-        }
-    }
+    // endedAt:operation: intentionally unused — see FileDragSourceView.
 
     // MARK: - NSFilePromiseProviderDelegate
 
@@ -144,6 +143,13 @@ private final class DragSourceNSView: NSView, NSDraggingSource, NSFilePromisePro
             }
             try FileManager.default.copyItem(at: src, to: url)
             completionHandler(nil)
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+                self.deliveredCount += 1
+                if self.deliveredCount >= self.expectedCount {
+                    self.onAllDelivered()
+                }
+            }
         } catch {
             completionHandler(error)
         }
