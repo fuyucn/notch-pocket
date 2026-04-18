@@ -106,4 +106,45 @@ struct NotchViewModelTests {
         vm.shelfRefreshToken &+= 1
         #expect(vm.shelfRefreshToken == 1)
     }
+
+    @Test @MainActor
+    func requestCloseWithItemsGoesToMinimized() {
+        let vm = makeVM()
+        vm.shelfCount = 3
+        vm.markDropped()
+        #expect(vm.status == .opened)
+        vm.requestClose()
+        #expect(vm.status == .minimized)
+    }
+
+    @Test @MainActor
+    func requestCloseWithNoItemsGoesToClosed() {
+        let vm = makeVM()
+        vm.shelfCount = 0
+        vm.markDropped()
+        #expect(vm.status == .opened)
+        vm.requestClose()
+        #expect(vm.status == .closed)
+    }
+
+    @Test @MainActor
+    func dragEndingWithItemsPreservesMinimized() {
+        let vm = makeVM()
+        vm.shelfCount = 2
+        vm.status = .minimized
+        // Pointer moves far away, no drag — must not flip .minimized → .closed.
+        vm.updateMouseLocation(NSPoint(x: -500, y: -500), isDragging: false)
+        #expect(vm.status == .minimized)
+    }
+
+    @Test @MainActor
+    func draggingFromMinimizedEntersPoppingThenOpened() {
+        let vm = makeVM()
+        vm.shelfCount = 2
+        vm.status = .minimized
+        vm.updateMouseLocation(NSPoint(x: 800, y: 900), isDragging: true)
+        #expect(vm.status == .popping)
+        vm.updateMouseLocation(NSPoint(x: 800, y: 950), isDragging: true)
+        #expect(vm.status == .opened)
+    }
 }
