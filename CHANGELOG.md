@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v0.5.0] — 2026-04-18
+
+Plan 9: Minimized capsule around the notch (`plan-9-minimize-retry`)
+
+### Added
+- **`.minimized` state** on `NotchViewModel` plus a new `MinimizedPanel` — a pill-shaped capsule that sits around the physical notch while the shelf has files. Left shoulder shows a tray icon, right shoulder shows the item count. Height and vertical placement track the physical notch so the middle of the capsule is hidden by the notch itself. Tap either shoulder to open the shelf.
+- Launch-time status: if the shelf has persisted items, the app comes up already showing the minimized capsule.
+- `requestClose()` on `NotchViewModel`: the × button and click-outside-to-close return to `.minimized` instead of `.closed` when the shelf has items.
+
+### Changed
+- Shelf `.closed` → `.minimized` auto-promotion when the shelf gains its first file; `.minimized` → `.closed` auto-demotion when the shelf is cleared.
+
+### Known
+- While the shelf is opened, the transparent margins of the NotchPanel window still intercept clicks on menu-bar icons directly to the left/right of the shelf. Workarounds to make those clicks pass through broke drag-in, so this is deferred.
+
 ## [v0.4.5] — 2026-04-18
 
 ### Changed
