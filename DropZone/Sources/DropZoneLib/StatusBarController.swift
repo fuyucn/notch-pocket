@@ -50,23 +50,20 @@ public final class StatusBarController {
 
     /// Update the menu to reflect the current shelf file count.
     public func updateFileCount(_ count: Int) {
-        // "Show Shelf" is always present (disabled when empty) so the user
-        // can always find it; "Clear" and the count line only appear when
-        // there's something to clear / count.
-        showShelfItem?.isHidden = false
-        showShelfItem?.isEnabled = count > 0
-
         if count > 0 {
             fileCountItem?.title = "\(count) file\(count == 1 ? "" : "s") on shelf"
             fileCountItem?.isHidden = false
             clearShelfItem?.isHidden = false
+            showShelfItem?.isHidden = false
 
+            // Update status bar icon to indicate files are stored
             if let button = statusItem?.button {
                 button.image = NSImage(systemSymbolName: "tray.full", accessibilityDescription: "DropZone – \(count) files")
             }
         } else {
             fileCountItem?.isHidden = true
             clearShelfItem?.isHidden = true
+            showShelfItem?.isHidden = true
 
             if let button = statusItem?.button {
                 button.image = NSImage(systemSymbolName: "tray.and.arrow.down", accessibilityDescription: "DropZone")
@@ -84,9 +81,10 @@ public final class StatusBarController {
         menu.addItem(countItem)
         fileCountItem = countItem
 
-        // Show shelf — always visible; disabled when shelf is empty.
+        // Show shelf
         let showItem = NSMenuItem(title: "Show Shelf", action: #selector(showShelfAction(_:)), keyEquivalent: "s")
         showItem.target = self
+        showItem.isHidden = true
         menu.addItem(showItem)
         showShelfItem = showItem
 
