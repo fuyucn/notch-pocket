@@ -25,16 +25,9 @@ public final class NotchDropForwarder: NSView {
 
     required init?(coder: NSCoder) { fatalError() }
 
-    // NOTE: Do NOT override `hitTest` to return nil. Even though dragging
-    // events technically dispatch through a different path than mouse
-    // events, AppKit's dispatcher consults the view hierarchy's hit-test
-    // result first — a nil hitTest makes `draggingEntered` unreachable.
-    // Click-through is handled at the window level via
-    // `NSPanel.ignoresMouseEvents = true` (set by `NotchPanel` whenever the
-    // view-model is in `.closed`). Dragging events bypass that flag.
+    public override func hitTest(_ point: NSPoint) -> NSView? { nil }
 
     public override func draggingEntered(_ sender: any NSDraggingInfo) -> NSDragOperation {
-        NSLog("[DropZone] draggingEntered status=unknown")
         let names = Self.readFileNames(from: sender.draggingPasteboard)
         onDraggingChanged?(true, names)
         let point = convert(sender.draggingLocation, from: nil)
