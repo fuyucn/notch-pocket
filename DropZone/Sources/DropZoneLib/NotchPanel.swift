@@ -16,7 +16,7 @@ public final class NotchPanel: NSPanel {
         // tall which is enough for click/drag detection but NOT enough to
         // contain the opened shelf SwiftUI tree — content would draw outside
         // the NSHostingView frame.
-        let rect = Self.containerFrame(for: viewModel.geometry)
+        let rect = Self.containerFrame(for: viewModel.geometry, status: viewModel.status)
         super.init(
             contentRect: rect,
             styleMask: [.nonactivatingPanel, .borderless, .fullSizeContentView],
@@ -36,8 +36,10 @@ public final class NotchPanel: NSPanel {
         titlebarAppearsTransparent = true
         isReleasedWhenClosed = false
 
-        // Click-through in the idle state
-        ignoresMouseEvents = true
+        // We keep mouse events so the panel can function as an
+        // NSDraggingDestination. Click-through is achieved by giving the
+        // panel a small frame when idle (see syncFrameForStatus).
+        ignoresMouseEvents = false
 
         let container = NSView(frame: rect)
         container.autoresizingMask = [.width, .height]
@@ -63,6 +65,7 @@ public final class NotchPanel: NSPanel {
             .sink { [weak self] status in
                 guard let self else { return }
                 self.syncIgnoresMouseEvents()
+                self.syncFrameForStatus()
                 if status == .opened {
                     self.makeKey()
                 } else if self.isKeyWindow {
@@ -102,7 +105,13 @@ public final class NotchPanel: NSPanel {
     /// Public so tests can force-sync after synchronous model mutation
     /// (without waiting for Combine dispatch).
     public func syncIgnoresMouseEvents() {
-        ignoresMouseEvents = (viewModel.status == .closed)
+        // Keep `ignoresMouseEvents = false` in every status so the window
+        // remains an `NSDraggingDestination` target (AppKit stops dispatching
+        // drag events to a window with `ignoresMouseEvents = true`).
+        // Click-through instead comes from giving the window a tiny frame
+        // when idle (see `containerFrame(for:status:)`), so we're not
+        // visually or physically blocking large regions of the screen.
+        ignoresMouseEvents = false
         // Hide the drop forwarder overlay when the panel shows interactive
         // content (opened shelf) so taps reach the SwiftUI root view. For
         // popping — which doubles as a tappable "minimized" indicator when
@@ -115,20 +124,51 @@ public final class NotchPanel: NSPanel {
 
     public func updateGeometry(_ geometry: NotchGeometry) {
         viewModel.geometry = geometry
-        setFrame(Self.containerFrame(for: geometry), display: true)
+        syncFrameForStatus()
     }
 
-    /// Window rect that comfortably contains every state (closed, popping,
-    /// opened) plus shadow/animation room. Top-anchored to screen, width
-    /// matches hoverTriggerRect (which is the drag-detection area).
-    private static func containerFrame(for geometry: NotchGeometry) -> NSRect {
-        let hover = geometry.hoverTriggerRect
-        let neededHeight = max(hover.height, geometry.openedPanelSize.height + 60)
-        return NSRect(
-            x: hover.origin.x,
-            y: geometry.screenFrame.maxY - neededHeight,
-            width: hover.width,
-            height: neededHeight
-        )
+    /// Resize the panel window to match the current status. We give `.closed`
+    /// a tiny frame directly under the notch (so we don't block clicks to
+    /// the apps below), and the full hover-trigger-sized frame for any
+    /// non-closed status so we can act as an `NSDraggingDestination` over a
+    /// useful region of the screen.
+    public func syncFrameForStatus() {
+        let frame = Self.containerFrame(for: viewModel.geometry, status: viewModel.status)
+        setFrame(frame, display: true)
+    }
+
+    /// Window frame depends on status:
+    ///   - `.closed`: small rect right under the notch so we don't occlude
+    ///     clicks. It is still big enough to be a drag-destination — when a
+    ///     user drags a file to the notch, macOS will deliver
+    ///     `draggingEntered` once the cursor enters this rect, upgrading the
+    ///     panel to `.popping` (then `.opened` on drop).
+    ///   - `.popping` / `.opened`: full hover-trigger-sized frame with
+    ///     enough height to contain the opened shelf SwiftUI tree.
+    private static func containerFrame(
+        for geometry: NotchGeometry,
+        status: NotchViewModel.Status
+    ) -> NSRect {
+        switch status {
+        case .closed:
+            let notch = geometry.notchRect ?? .zero
+            let w = notch.width > 0 ? notch.width + 40 : 240
+            let h: CGFloat = 40
+            return NSRect(
+                x: geometry.screenFrame.midX - w / 2,
+                y: geometry.screenFrame.maxY - h,
+                width: w,
+                height: h
+            )
+        case .popping, .opened:
+            let hover = geometry.hoverTriggerRect
+            let neededHeight = max(hover.height, geometry.openedPanelSize.height + 60)
+            return NSRect(
+                x: hover.origin.x,
+                y: geometry.screenFrame.maxY - neededHeight,
+                width: hover.width,
+                height: neededHeight
+            )
+        }
     }
 }
