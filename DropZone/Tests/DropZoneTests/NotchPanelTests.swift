@@ -45,16 +45,6 @@ struct NotchPanelTests {
     }
 
     @Test @MainActor
-    func panelReceivesMouseEventsWhenMinimized() {
-        let geo = makeGeometry()
-        let vm = NotchViewModel(geometry: geo)
-        let panel = NotchPanel(viewModel: vm)
-        vm.status = .minimized
-        panel.syncIgnoresMouseEvents()
-        #expect(panel.ignoresMouseEvents == false)
-    }
-
-    @Test @MainActor
     func updateGeometryResizesFrame() {
         let geo = makeGeometry()
         let vm = NotchViewModel(geometry: geo)

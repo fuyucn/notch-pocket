@@ -14,10 +14,6 @@ public struct NotchPanelRootView: View {
         case .closed:
             // Fully hidden when idle — don't render a visible pill under the notch.
             return .zero
-        case .minimized:
-            let notchWidth = viewModel.geometry.notchRect?.width ?? 200
-            let notchHeight = viewModel.geometry.notchRect?.height ?? 32
-            return CGSize(width: notchWidth + 80, height: notchHeight + 8)
         case .popping:
             let s = viewModel.geometry.preActivatedPanelSize
             return CGSize(width: s.width, height: s.height)
@@ -29,14 +25,14 @@ public struct NotchPanelRootView: View {
 
     private var targetTopRadius: CGFloat {
         switch viewModel.status {
-        case .closed, .minimized: return NotchShape.closedTopRadius
+        case .closed: return NotchShape.closedTopRadius
         case .popping, .opened: return NotchShape.openedTopRadius
         }
     }
 
     private var targetBottomRadius: CGFloat {
         switch viewModel.status {
-        case .closed, .minimized: return NotchShape.closedBottomRadius
+        case .closed: return NotchShape.closedBottomRadius
         case .popping, .opened: return NotchShape.openedBottomRadius
         }
     }
@@ -65,8 +61,6 @@ public struct NotchPanelRootView: View {
         switch viewModel.status {
         case .closed:
             Color.clear
-        case .minimized:
-            minimizedPill
         case .popping:
             VStack(spacing: 0) {
                 notchTopBar
@@ -152,7 +146,7 @@ public struct NotchPanelRootView: View {
             } else {
                 EmptyView()
             }
-        case .minimized, .closed:
+        case .closed:
             EmptyView()
         }
     }
@@ -164,39 +158,7 @@ public struct NotchPanelRootView: View {
     }
 
     private func close() {
-        viewModel.requestClose()
-    }
-
-    /// A compact pill sitting just below the notch showing a tray icon and file count.
-    /// Tapping it opens the shelf.
-    @ViewBuilder
-    private var minimizedPill: some View {
-        let notchWidth = viewModel.geometry.notchRect?.width ?? 200
-        let notchHeight = viewModel.geometry.notchRect?.height ?? 32
-        HStack(spacing: 0) {
-            // Left shoulder — tray icon
-            Image(systemName: "tray.fill")
-                .font(.system(size: 11, weight: .medium))
-                .foregroundStyle(.white.opacity(0.9))
-                .frame(maxWidth: .infinity, alignment: .trailing)
-                .padding(.trailing, 10)
-            // Reserve the physical notch width
-            Color.clear.frame(width: notchWidth)
-            // Right shoulder — count badge
-            Text("\(viewModel.shelfCount)")
-                .font(.system(size: 11, weight: .semibold))
-                .foregroundStyle(.white)
-                .padding(.horizontal, 7)
-                .padding(.vertical, 2)
-                .background(Capsule().fill(Color.white.opacity(0.18)))
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.leading, 10)
-        }
-        .frame(width: notchWidth + 80, height: notchHeight + 8)
-        .contentShape(Rectangle())
-        .onTapGesture {
-            viewModel.status = .opened
-        }
+        viewModel.forceClose()
     }
 
     @ViewBuilder

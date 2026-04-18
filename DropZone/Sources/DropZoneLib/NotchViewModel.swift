@@ -7,7 +7,6 @@ public final class NotchViewModel: ObservableObject {
         case closed
         case popping
         case opened
-        case minimized
     }
 
     @Published public var status: Status = .closed
@@ -57,16 +56,13 @@ public final class NotchViewModel: ObservableObject {
 
     /// Drive the status from a pointer location + drag flag.
     /// When already `.opened`, this is a no-op — the shelf is explicitly
-    /// dismissed via `forceClose()` or `requestClose()`.
-    /// `.minimized` is treated like `.closed` as a valid entry state for drag
-    /// flows; non-drag moves from `.minimized` stay `.minimized`.
+    /// dismissed via `forceClose()`.
     public func updateMouseLocation(_ point: NSPoint, isDragging: Bool) {
         if status == .opened {
             return
         }
         guard isDragging else {
-            // Not dragging: closed stays closed; minimized stays minimized.
-            if status == .popping { status = closedOrMinimized }
+            if status != .closed { status = .closed }
             return
         }
         if geometry.activationZone.contains(point) {
@@ -74,29 +70,12 @@ public final class NotchViewModel: ObservableObject {
         } else if geometry.hoverTriggerRect.contains(point) {
             if status != .popping { status = .popping }
         } else {
-            // Cursor is outside everything while dragging — go to closed
-            // (don't promote to minimized during active drag).
-            if status != .closed && status != .minimized { status = .closed }
+            if status != .closed { status = .closed }
         }
     }
 
-    /// Close unconditionally — always goes to `.closed` regardless of shelf content.
-    /// Use for quit / teardown paths.
     public func forceClose() {
         status = .closed
         openStickyUntil = nil
-    }
-
-    /// Smart close: goes to `.minimized` when shelf has items, otherwise `.closed`.
-    /// Use for click-outside / × button / keyboard shortcut dismiss paths.
-    public func requestClose() {
-        status = closedOrMinimized
-        openStickyUntil = nil
-    }
-
-    // MARK: - Helpers
-
-    private var closedOrMinimized: Status {
-        shelfCount > 0 ? .minimized : .closed
     }
 }
