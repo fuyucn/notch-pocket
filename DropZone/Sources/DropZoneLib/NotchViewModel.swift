@@ -7,6 +7,7 @@ public final class NotchViewModel: ObservableObject {
         case closed
         case popping
         case opened
+        case minimized
     }
 
     @Published public var status: Status = .closed
@@ -57,18 +58,15 @@ public final class NotchViewModel: ObservableObject {
     /// Drive the status from a pointer location + drag flag.
     /// When already `.opened`, this is a no-op — the shelf is explicitly
     /// dismissed via `forceClose()` or `requestClose()`.
-    ///
-    /// When the shelf has items, the idle state is `.popping` (the pill
-    /// stays as a "you have files here" indicator). When the shelf is
-    /// empty, the idle state is `.closed`.
+    /// `.minimized` is treated like `.closed` as a valid entry state for drag
+    /// flows; non-drag moves from `.minimized` stay `.minimized`.
     public func updateMouseLocation(_ point: NSPoint, isDragging: Bool) {
         if status == .opened {
             return
         }
         guard isDragging else {
-            // Not dragging: settle to popping-if-items-else-closed.
-            let target = idleStatus
-            if status != target { status = target }
+            // Not dragging: closed stays closed; minimized stays minimized.
+            if status == .popping { status = closedOrMinimized }
             return
         }
         if geometry.activationZone.contains(point) {
@@ -76,10 +74,9 @@ public final class NotchViewModel: ObservableObject {
         } else if geometry.hoverTriggerRect.contains(point) {
             if status != .popping { status = .popping }
         } else {
-            // Cursor outside the hover rect while dragging — fall back to
-            // the idle state (popping if shelf has items, else closed).
-            let target = idleStatus
-            if status != target { status = target }
+            // Cursor is outside everything while dragging — go to closed
+            // (don't promote to minimized during active drag).
+            if status != .closed && status != .minimized { status = .closed }
         }
     }
 
@@ -90,20 +87,16 @@ public final class NotchViewModel: ObservableObject {
         openStickyUntil = nil
     }
 
-    /// Smart close: falls back to the idle state — `.popping` if the shelf
-    /// has items (acts as a minimized indicator), `.closed` otherwise.
+    /// Smart close: goes to `.minimized` when shelf has items, otherwise `.closed`.
     /// Use for click-outside / × button / keyboard shortcut dismiss paths.
     public func requestClose() {
-        status = idleStatus
+        status = closedOrMinimized
         openStickyUntil = nil
     }
 
     // MARK: - Helpers
 
-    /// The resting state when there's no drag and no user-invoked opening:
-    /// `.popping` when the shelf has at least one item (so the pill stays
-    /// visible as a "files are here" reminder); `.closed` otherwise.
-    public var idleStatus: Status {
-        shelfCount > 0 ? .popping : .closed
+    private var closedOrMinimized: Status {
+        shelfCount > 0 ? .minimized : .closed
     }
 }

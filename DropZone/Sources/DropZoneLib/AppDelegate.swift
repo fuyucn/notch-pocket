@@ -38,9 +38,10 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
         vm.shelfCount = shelfManager.items.count
         vm.shelfManager = shelfManager
         vm.settingsManager = settings
-        // If the shelf has items (restored from cache), start with the
-        // popping pill as a "files are here" reminder.
-        vm.status = vm.idleStatus
+        // Start minimized if items are already on the shelf (e.g. restored from cache).
+        if shelfManager.items.count > 0 {
+            vm.status = .minimized
+        }
         notchViewModel = vm
 
         let panel = NotchPanel(viewModel: vm)
@@ -115,8 +116,8 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
             controller?.updateFileCount(count)
             vm?.shelfCount = count
             vm?.shelfRefreshToken &+= 1
-            // When shelf is emptied while idle-popping (not in drag), collapse to closed.
-            if count == 0, let vm, vm.status == .popping, vm.isDragInside == false {
+            // When last item is removed while minimized, clear the pill.
+            if count == 0, let vm, vm.status == .minimized {
                 vm.status = .closed
             }
         }

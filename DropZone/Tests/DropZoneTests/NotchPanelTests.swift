@@ -45,11 +45,11 @@ struct NotchPanelTests {
     }
 
     @Test @MainActor
-    func panelReceivesMouseEventsWhenPopping() {
+    func panelReceivesMouseEventsWhenMinimized() {
         let geo = makeGeometry()
         let vm = NotchViewModel(geometry: geo)
         let panel = NotchPanel(viewModel: vm)
-        vm.status = .popping
+        vm.status = .minimized
         panel.syncIgnoresMouseEvents()
         #expect(panel.ignoresMouseEvents == false)
     }
