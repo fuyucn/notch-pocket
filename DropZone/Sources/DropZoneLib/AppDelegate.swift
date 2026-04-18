@@ -38,6 +38,10 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
         vm.shelfCount = shelfManager.items.count
         vm.shelfManager = shelfManager
         vm.settingsManager = settings
+        // Start minimized if items are already on the shelf (e.g. restored from cache).
+        if shelfManager.items.count > 0 {
+            vm.status = .minimized
+        }
         notchViewModel = vm
 
         let panel = NotchPanel(viewModel: vm)
@@ -97,9 +101,14 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
         shelfManager.onItemsChanged = { [weak controller, weak shelfManager, weak vm] in
             previousOnItemsChanged?()
             guard let shelfManager else { return }
-            controller?.updateFileCount(shelfManager.items.count)
-            vm?.shelfCount = shelfManager.items.count
+            let count = shelfManager.items.count
+            controller?.updateFileCount(count)
+            vm?.shelfCount = count
             vm?.shelfRefreshToken &+= 1
+            // When last item is removed while minimized, clear the pill.
+            if count == 0, let vm, vm.status == .minimized {
+                vm.status = .closed
+            }
         }
         statusBarController = controller
 
@@ -124,7 +133,11 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
         let shortcuts = KeyboardShortcutManager()
         shortcuts.onToggleShelf = { [weak vm] in
             guard let vm else { return }
-            vm.status = (vm.status == .opened) ? .closed : .opened
+            if vm.status == .opened {
+                vm.requestClose()
+            } else {
+                vm.status = .opened
+            }
         }
         shortcuts.register()
         keyboardShortcutManager = shortcuts

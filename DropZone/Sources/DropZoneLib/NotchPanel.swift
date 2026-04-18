@@ -82,7 +82,7 @@ public final class NotchPanel: NSPanel {
             MainActor.assumeIsolated {
                 guard let self else { return }
                 if self.viewModel.status == .opened {
-                    self.viewModel.forceClose()
+                    self.viewModel.requestClose()
                 }
             }
         }
@@ -103,6 +103,9 @@ public final class NotchPanel: NSPanel {
     /// (without waiting for Combine dispatch).
     public func syncIgnoresMouseEvents() {
         ignoresMouseEvents = (viewModel.status == .closed)
+        // Hide the drop forwarder overlay when the panel shows interactive content
+        // (minimized pill or opened shelf) so taps reach the SwiftUI root view.
+        dropForwarder?.isHidden = (viewModel.status == .minimized || viewModel.status == .opened)
     }
 
     public func updateGeometry(_ geometry: NotchGeometry) {
