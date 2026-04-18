@@ -87,12 +87,6 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
             return false
         }
 
-        // Keep shelfCount synced with shelf manager
-        shelfManager.onItemsChanged = { [weak vm, weak shelfManager] in
-            guard let vm, let shelfManager else { return }
-            vm.shelfCount = shelfManager.items.count
-        }
-
         // Status bar
         let controller = StatusBarController()
         controller.setup()

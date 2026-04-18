@@ -5,6 +5,8 @@ import AppKit
 struct AppDelegateTests {
     @Test @MainActor
     func appDelegateExposesMinimizedPanel() {
+        // AppDelegate bails early if no screen is available; skip on headless.
+        guard NSScreen.main != nil else { return }
         let delegate = AppDelegate()
         delegate.applicationDidFinishLaunching(Notification(name: Notification.Name("test")))
         #expect(delegate.minimizedPanel != nil)
