@@ -8,14 +8,21 @@ import SwiftUI
 public struct MinimizedBarView: View {
     public let shelfCount: Int
     public let notchWidth: CGFloat
+    public let notchHeight: CGFloat
     public let onTap: () -> Void
 
     public static let height: CGFloat = 32
     public static let shoulderWidth: CGFloat = 52
 
-    public init(shelfCount: Int, notchWidth: CGFloat, onTap: @escaping () -> Void) {
+    public init(
+        shelfCount: Int,
+        notchWidth: CGFloat,
+        notchHeight: CGFloat = Self.height,
+        onTap: @escaping () -> Void
+    ) {
         self.shelfCount = shelfCount
         self.notchWidth = notchWidth
+        self.notchHeight = notchHeight
         self.onTap = onTap
     }
 
@@ -27,10 +34,10 @@ public struct MinimizedBarView: View {
                     .font(.system(size: 11, weight: .medium))
                     .foregroundStyle(.white.opacity(0.9))
             }
-            .frame(width: Self.shoulderWidth, height: Self.height)
+            .frame(width: Self.shoulderWidth, height: notchHeight)
 
             // Notch gap — reserved transparent space the physical notch sits over.
-            Color.clear.frame(width: notchWidth, height: Self.height)
+            Color.clear.frame(width: notchWidth, height: notchHeight)
 
             // Right shoulder
             HStack(spacing: 0) {
@@ -41,17 +48,15 @@ public struct MinimizedBarView: View {
                     .padding(.vertical, 2)
                     .background(Capsule().fill(Color.white.opacity(0.18)))
             }
-            .frame(width: Self.shoulderWidth, height: Self.height)
+            .frame(width: Self.shoulderWidth, height: notchHeight)
         }
-        .frame(height: Self.height)
+        .frame(height: notchHeight)
         .background(
-            // Rounded capsule. The middle is clear anyway; the shape is purely
-            // visual polish for the two shoulders.
-            RoundedRectangle(cornerRadius: 10, style: .continuous)
+            RoundedRectangle(cornerRadius: notchHeight / 2, style: .continuous)
                 .fill(Color.black)
         )
         .overlay(
-            RoundedRectangle(cornerRadius: 10, style: .continuous)
+            RoundedRectangle(cornerRadius: notchHeight / 2, style: .continuous)
                 .stroke(Color.white.opacity(0.15), lineWidth: 0.5)
         )
         .shadow(color: .black.opacity(0.45), radius: 10, y: 4)
