@@ -63,7 +63,13 @@ public struct ShelfListView: View {
             if !sortedItems.isEmpty {
                 AllDragHandle(
                     items: sortedItems,
-                    onAllMoved: { if removeOnDragOut { onRemoveAll() } }
+                    onDragEnded: { operation in
+                        let success = !operation.isEmpty
+                        let wasMove = operation.contains(.move) || operation.contains(.generic)
+                        if success, removeOnDragOut, wasMove {
+                            onRemoveAll()
+                        }
+                    }
                 )
                 .padding(6)
             }

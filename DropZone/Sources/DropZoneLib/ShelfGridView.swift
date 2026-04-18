@@ -65,7 +65,13 @@ public struct ShelfGridView: View {
             if !sortedItems.isEmpty {
                 AllDragHandle(
                     items: sortedItems,
-                    onAllMoved: { if removeOnDragOut { onRemoveAll() } }
+                    onDragEnded: { operation in
+                        let success = !operation.isEmpty
+                        let wasMove = operation.contains(.move) || operation.contains(.generic)
+                        if success, removeOnDragOut, wasMove {
+                            onRemoveAll()
+                        }
+                    }
                 )
                 .padding(6)
             }
@@ -134,8 +140,15 @@ struct ShelfGridCell: View {
             withAnimation(.easeInOut(duration: 0.12)) { isHovering = hovering }
         }
         .overlay(
-            FileDragSourceView(url: item.shelfURL) { droppedOK in
-                if droppedOK, removeOnDragOut { onRemove() }
+            FileDragSourceView(url: item.shelfURL) { operation in
+                // removeOnDragOut gates any shelf-side removal. We only fire
+                // remove on a real move (Finder default) or when the setting
+                // forces removal regardless.
+                let success = !operation.isEmpty
+                let wasMove = operation.contains(.move) || operation.contains(.generic)
+                if success, removeOnDragOut, wasMove {
+                    onRemove()
+                }
             }
         )
         .contextMenu {
