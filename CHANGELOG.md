@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v0.4.2] — 2026-04-17
+
+Continuing `plan-7-airdrop-drop-target`.
+
+### Added
+- **Popping pill doubles as a minimized shelf indicator**. When the shelf has items and the panel isn't opened, the popping pill stays visible showing a tray icon, up to 3 file thumbnails, and a count badge — a persistent "files are here" reminder. Tap it to open the full shelf.
+- `NotchViewModel.requestClose()` — smart close that returns to the popping pill when the shelf has items, otherwise fully hides. Used by click-outside, the × button, and the Cmd+Shift+D keyboard shortcut.
+- `NotchViewModel.forceClose()` — unconditional `.closed` for quit / teardown paths.
+- App launch now shows the popping pill automatically if restored shelf content is present.
+
+### Changed
+- `PreActivationBarView` forks its content on `isFileDragging`:
+  - `true` → existing "Drop here" drag affordance
+  - `false` → tray icon, mini thumbnails (first 3 items, + "+N" overflow), count badge
+- `NotchDropForwarder` dependency on `NotchViewModel.isDragInside` now also drives the popping pill's visual mode (drag preview vs. idle reminder).
+
+### Removed
+- The short-lived `.minimized` status case introduced earlier in the session. Folded into `.popping` to keep the state machine at 3 cases — less duplication across view, view-model, and tests.
+
 ## [v0.4.1] — 2026-04-17
 
 Plan 7 (AirDrop + drag-out) and plan 8 (storage modes) (`plan-7-airdrop-drop-target`)
@@ -121,7 +140,8 @@ Plan 1: Project scaffolding and core modules (`plan-1-project-setup`)
 - Project documentation: README, CLAUDE.md, DESIGN.md, PLANS.md
 - `.gitignore` with Swift/Xcode/macOS patterns
 
-[Unreleased]: https://github.com/fuyucn/notch-pocket/compare/v0.4.1...HEAD
+[Unreleased]: https://github.com/fuyucn/notch-pocket/compare/v0.4.2...HEAD
+[v0.4.2]: https://github.com/fuyucn/notch-pocket/compare/v0.4.1...v0.4.2
 [v0.4.1]: https://github.com/fuyucn/notch-pocket/compare/v0.4.0...v0.4.1
 [v0.4.0]: https://github.com/fuyucn/notch-pocket/compare/v0.3.0...v0.4.0
 [v0.3.0]: https://github.com/fuyucn/notch-pocket/compare/v0.2.0...v0.3.0

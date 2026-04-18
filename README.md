@@ -4,7 +4,7 @@
 
 A macOS app that transforms your MacBook's notch into a temporary file shelf — a pocket right in the notch — enabling frictionless cross-window, cross-space file transfers via drag-and-drop.
 
-![Version](https://img.shields.io/badge/version-v0.4.1-blue)
+![Version](https://img.shields.io/badge/version-v0.4.2-blue)
 ![macOS 14+](https://img.shields.io/badge/macOS-14%2B-blue)
 ![Swift 6.0](https://img.shields.io/badge/Swift-6.0-orange)
 ![License](https://img.shields.io/badge/license-MIT-green)
