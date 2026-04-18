@@ -82,7 +82,7 @@ public final class NotchPanel: NSPanel {
             MainActor.assumeIsolated {
                 guard let self else { return }
                 if self.viewModel.status == .opened {
-                    self.viewModel.forceClose()
+                    self.viewModel.requestClose()
                 }
             }
         }

@@ -165,7 +165,7 @@ public struct NotchPanelRootView: View {
     }
 
     private func close() {
-        viewModel.forceClose()
+        viewModel.requestClose()
     }
 
     @ViewBuilder

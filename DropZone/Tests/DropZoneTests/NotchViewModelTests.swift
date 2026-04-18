@@ -147,4 +147,15 @@ struct NotchViewModelTests {
         vm.updateMouseLocation(NSPoint(x: 800, y: 950), isDragging: true)
         #expect(vm.status == .opened)
     }
+
+    @Test @MainActor
+    func forceCloseIgnoresMinimizeEvenWithItems() {
+        // forceClose is an explicit "fully close" path (quit, teardown).
+        // requestClose is the user-intent path that honors minimize.
+        let vm = makeVM()
+        vm.shelfCount = 5
+        vm.markDropped()
+        vm.forceClose()
+        #expect(vm.status == .closed)
+    }
 }
