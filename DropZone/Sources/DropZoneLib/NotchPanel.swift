@@ -103,9 +103,14 @@ public final class NotchPanel: NSPanel {
     /// (without waiting for Combine dispatch).
     public func syncIgnoresMouseEvents() {
         ignoresMouseEvents = (viewModel.status == .closed)
-        // Hide the drop forwarder overlay when the panel shows interactive content
-        // (minimized pill or opened shelf) so taps reach the SwiftUI root view.
-        dropForwarder?.isHidden = (viewModel.status == .minimized || viewModel.status == .opened)
+        // Hide the drop forwarder overlay when the panel shows interactive
+        // content (opened shelf) so taps reach the SwiftUI root view. For
+        // popping — which doubles as a tappable "minimized" indicator when
+        // the shelf has items — we also hide it so the tap gesture on the
+        // SwiftUI root fires. Drag-in still works because the hover rect
+        // and .opened transition are driven by the main panel drop
+        // destination, not this overlay.
+        dropForwarder?.isHidden = (viewModel.status == .opened)
     }
 
     public func updateGeometry(_ geometry: NotchGeometry) {

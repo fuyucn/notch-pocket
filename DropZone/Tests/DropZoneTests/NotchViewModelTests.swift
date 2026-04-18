@@ -107,7 +107,7 @@ struct NotchViewModelTests {
         #expect(vm.shelfRefreshToken == 1)
     }
 
-    // MARK: - minimized state
+    // MARK: - idle state (popping-as-minimized when shelf has items)
 
     @Test @MainActor
     func requestCloseWithEmptyShelfGoesToClosed() {
@@ -120,13 +120,13 @@ struct NotchViewModelTests {
     }
 
     @Test @MainActor
-    func requestCloseWithItemsGoesToMinimized() {
+    func requestCloseWithItemsStaysInPoppingAsIdle() {
         let vm = makeVM()
         vm.markDropped()
         #expect(vm.status == .opened)
         vm.shelfCount = 3
         vm.requestClose()
-        #expect(vm.status == .minimized)
+        #expect(vm.status == .popping)
     }
 
     @Test @MainActor
@@ -139,21 +139,11 @@ struct NotchViewModelTests {
     }
 
     @Test @MainActor
-    func updateMouseLocationFromMinimizedWithDragGoesToPopping() {
+    func idleStatusReflectsShelfCount() {
         let vm = makeVM()
-        vm.shelfCount = 1
-        vm.status = .minimized
-        // Point inside hoverTriggerRect but not activationZone → .popping
-        vm.updateMouseLocation(NSPoint(x: 800, y: 900), isDragging: true)
-        #expect(vm.status == .popping)
-    }
-
-    @Test @MainActor
-    func updateMouseLocationFromMinimizedWithoutDragStaysMinimized() {
-        let vm = makeVM()
-        vm.shelfCount = 1
-        vm.status = .minimized
-        vm.updateMouseLocation(NSPoint(x: 800, y: 900), isDragging: false)
-        #expect(vm.status == .minimized)
+        vm.shelfCount = 0
+        #expect(vm.idleStatus == .closed)
+        vm.shelfCount = 2
+        #expect(vm.idleStatus == .popping)
     }
 }
