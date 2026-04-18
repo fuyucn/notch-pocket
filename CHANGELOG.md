@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v0.4.3] — 2026-04-17
+
+Revert the v0.4.2 `.minimized` / popping-as-idle work — drag-in near the notch regressed across several attempts. Tree now matches v0.4.1 behavior. v0.4.2 tag remains for history.
+
+### Changed
+- Reverted all commits between v0.4.1 and v0.4.2, including the `.minimized` state, popping-as-idle refactor, panel frame sizing changes, and the always-visible "Show Shelf" menu item.
+
 ## [v0.4.1] — 2026-04-17
 
 Plan 7 (AirDrop + drag-out) and plan 8 (storage modes) (`plan-7-airdrop-drop-target`)
