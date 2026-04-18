@@ -5,6 +5,7 @@ import Combine
 public final class NotchViewModel: ObservableObject {
     public enum Status: Sendable, Equatable {
         case closed
+        case minimized
         case popping
         case opened
     }
@@ -56,13 +57,14 @@ public final class NotchViewModel: ObservableObject {
 
     /// Drive the status from a pointer location + drag flag.
     /// When already `.opened`, this is a no-op — the shelf is explicitly
-    /// dismissed via `forceClose()`.
+    /// dismissed via `forceClose()` or `requestClose()`.
     public func updateMouseLocation(_ point: NSPoint, isDragging: Bool) {
         if status == .opened {
             return
         }
         guard isDragging else {
-            if status != .closed { status = .closed }
+            let resting: Status = shelfCount > 0 ? .minimized : .closed
+            if status != resting { status = resting }
             return
         }
         if geometry.activationZone.contains(point) {
@@ -70,12 +72,21 @@ public final class NotchViewModel: ObservableObject {
         } else if geometry.hoverTriggerRect.contains(point) {
             if status != .popping { status = .popping }
         } else {
-            if status != .closed { status = .closed }
+            let resting: Status = shelfCount > 0 ? .minimized : .closed
+            if status != resting { status = resting }
         }
     }
 
     public func forceClose() {
         status = .closed
+        openStickyUntil = nil
+    }
+
+    /// User-intent close: drops the opened shelf but respects minimize —
+    /// if there are items, fall back to `.minimized` instead of `.closed`.
+    /// Called by click-outside, × button, esc.
+    public func requestClose() {
+        status = shelfCount > 0 ? .minimized : .closed
         openStickyUntil = nil
     }
 }

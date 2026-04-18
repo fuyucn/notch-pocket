@@ -8,6 +8,7 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
     private(set) public var settingsManager: SettingsManager?
     private(set) public var settingsWindowController: SettingsWindowController?
     private(set) public var keyboardShortcutManager: KeyboardShortcutManager?
+    private(set) public var minimizedPanel: MinimizedPanel?
 
     public override init() { super.init() }
 
@@ -38,10 +39,14 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
         vm.shelfCount = shelfManager.items.count
         vm.shelfManager = shelfManager
         vm.settingsManager = settings
+        vm.status = shelfManager.items.count > 0 ? .minimized : .closed
         notchViewModel = vm
 
         let panel = NotchPanel(viewModel: vm)
         notchPanel = panel
+
+        let minimized = MinimizedPanel(viewModel: vm)
+        minimizedPanel = minimized
 
         // Drop handling
         panel.dropForwarder?.onDraggingChanged = { [weak vm] inside, names in
@@ -82,12 +87,6 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
             return false
         }
 
-        // Keep shelfCount synced with shelf manager
-        shelfManager.onItemsChanged = { [weak vm, weak shelfManager] in
-            guard let vm, let shelfManager else { return }
-            vm.shelfCount = shelfManager.items.count
-        }
-
         // Status bar
         let controller = StatusBarController()
         controller.setup()
@@ -97,9 +96,15 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
         shelfManager.onItemsChanged = { [weak controller, weak shelfManager, weak vm] in
             previousOnItemsChanged?()
             guard let shelfManager else { return }
-            controller?.updateFileCount(shelfManager.items.count)
-            vm?.shelfCount = shelfManager.items.count
-            vm?.shelfRefreshToken &+= 1
+            let count = shelfManager.items.count
+            controller?.updateFileCount(count)
+            guard let vm else { return }
+            vm.shelfCount = count
+            vm.shelfRefreshToken &+= 1
+            // Auto-promote closed → minimized when shelf gains first file while idle.
+            if count > 0, vm.status == .closed { vm.status = .minimized }
+            // Auto-demote minimized → closed when shelf goes empty.
+            if count == 0, vm.status == .minimized { vm.status = .closed }
         }
         statusBarController = controller
 
@@ -139,6 +144,8 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
         fileShelfManager = nil
         notchPanel?.orderOut(nil)
         notchPanel = nil
+        minimizedPanel?.orderOut(nil)
+        minimizedPanel = nil
         notchViewModel = nil
         statusBarController?.teardown()
         statusBarController = nil

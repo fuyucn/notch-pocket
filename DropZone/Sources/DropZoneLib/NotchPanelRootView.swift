@@ -11,7 +11,7 @@ public struct NotchPanelRootView: View {
 
     private var targetSize: CGSize {
         switch viewModel.status {
-        case .closed:
+        case .closed, .minimized:
             // Fully hidden when idle — don't render a visible pill under the notch.
             return .zero
         case .popping:
@@ -25,14 +25,14 @@ public struct NotchPanelRootView: View {
 
     private var targetTopRadius: CGFloat {
         switch viewModel.status {
-        case .closed: return NotchShape.closedTopRadius
+        case .closed, .minimized: return NotchShape.closedTopRadius
         case .popping, .opened: return NotchShape.openedTopRadius
         }
     }
 
     private var targetBottomRadius: CGFloat {
         switch viewModel.status {
-        case .closed: return NotchShape.closedBottomRadius
+        case .closed, .minimized: return NotchShape.closedBottomRadius
         case .popping, .opened: return NotchShape.openedBottomRadius
         }
     }
@@ -59,7 +59,7 @@ public struct NotchPanelRootView: View {
     @ViewBuilder
     private var content: some View {
         switch viewModel.status {
-        case .closed:
+        case .closed, .minimized:
             Color.clear
         case .popping:
             VStack(spacing: 0) {
@@ -153,7 +153,7 @@ public struct NotchPanelRootView: View {
             } else {
                 EmptyView()
             }
-        case .closed:
+        case .closed, .minimized:
             EmptyView()
         }
     }
@@ -165,7 +165,7 @@ public struct NotchPanelRootView: View {
     }
 
     private func close() {
-        viewModel.forceClose()
+        viewModel.requestClose()
     }
 
     @ViewBuilder
