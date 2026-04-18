@@ -17,11 +17,14 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
         let settings = SettingsManager()
         settingsManager = settings
 
-        let shelfManager = FileShelfManager()
+        let shelfManager = FileShelfManager(
+            storageModeProvider: { [weak settings] in settings?.storageMode ?? .reference }
+        )
         shelfManager.maxItems = settings.maxShelfItems
         shelfManager.maxTotalBytes = settings.maxStorageBytes
         shelfManager.expiryInterval = settings.expiryInterval
         try? shelfManager.ensureShelfDirectory()
+        shelfManager.validateItems() // Drop stale reference-mode entries on launch
         shelfManager.startExpiryTimer()
         fileShelfManager = shelfManager
 
@@ -35,6 +38,9 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
         vm.shelfCount = shelfManager.items.count
         vm.shelfManager = shelfManager
         vm.settingsManager = settings
+        // If the shelf has items (restored from cache), start with the
+        // popping pill as a "files are here" reminder.
+        vm.status = vm.idleStatus
         notchViewModel = vm
 
         let panel = NotchPanel(viewModel: vm)
@@ -46,6 +52,24 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
             vm.isDragInside = inside
             vm.primaryFileName = inside ? names.first : nil
             vm.extraCount = inside ? max(0, names.count - 1) : 0
+            if !inside { vm.isDragOverAirDrop = false }
+        }
+        panel.dropForwarder?.onDragMoved = { [weak vm] pointInView in
+            guard let vm else { return }
+            if let rect = vm.airDropRectInPanel {
+                vm.isDragOverAirDrop = rect.contains(pointInView)
+            } else {
+                vm.isDragOverAirDrop = false
+            }
+        }
+        panel.dropForwarder?.airDropRectProvider = { [weak vm] in
+            vm?.airDropRectInPanel
+        }
+        panel.dropForwarder?.onDropOnAirDrop = { [weak vm] urls in
+            vm?.isDragInside = false
+            vm?.isDragOverAirDrop = false
+            AirDropService.share(urls: urls)
+            return true
         }
         panel.dropForwarder?.onDropFiles = { [weak shelfManager, weak vm] urls, appName in
             guard let shelfManager else { return false }
@@ -54,6 +78,7 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
                 vm?.isDragInside = false
                 vm?.primaryFileName = nil
                 vm?.extraCount = 0
+                vm?.isDragOverAirDrop = false
                 vm?.markDropped()
                 return true
             }
@@ -75,9 +100,14 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
         shelfManager.onItemsChanged = { [weak controller, weak shelfManager, weak vm] in
             previousOnItemsChanged?()
             guard let shelfManager else { return }
-            controller?.updateFileCount(shelfManager.items.count)
-            vm?.shelfCount = shelfManager.items.count
+            let count = shelfManager.items.count
+            controller?.updateFileCount(count)
+            vm?.shelfCount = count
             vm?.shelfRefreshToken &+= 1
+            // When shelf is emptied while idle-popping (not in drag), collapse to closed.
+            if count == 0, let vm, vm.status == .popping, vm.isDragInside == false {
+                vm.status = .closed
+            }
         }
         statusBarController = controller
 
@@ -102,7 +132,11 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
         let shortcuts = KeyboardShortcutManager()
         shortcuts.onToggleShelf = { [weak vm] in
             guard let vm else { return }
-            vm.status = (vm.status == .opened) ? .closed : .opened
+            if vm.status == .opened {
+                vm.requestClose()
+            } else {
+                vm.status = .opened
+            }
         }
         shortcuts.register()
         keyboardShortcutManager = shortcuts

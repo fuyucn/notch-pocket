@@ -4,13 +4,20 @@ import AppKit
 @MainActor
 public struct ShelfListRowView: View {
     public let item: ShelfItem
+    public let removeOnDragOut: Bool
     public let onOpen: () -> Void
     public let onRemove: () -> Void
 
     @State private var isHovering = false
 
-    public init(item: ShelfItem, onOpen: @escaping () -> Void, onRemove: @escaping () -> Void) {
+    public init(
+        item: ShelfItem,
+        removeOnDragOut: Bool = true,
+        onOpen: @escaping () -> Void,
+        onRemove: @escaping () -> Void
+    ) {
         self.item = item
+        self.removeOnDragOut = removeOnDragOut
         self.onOpen = onOpen
         self.onRemove = onRemove
     }
@@ -77,11 +84,22 @@ public struct ShelfListRowView: View {
         .onHover { hovering in
             withAnimation(.easeInOut(duration: 0.12)) { isHovering = hovering }
         }
+        .overlay(
+            Group {
+                if let url = item.resolvedURL() {
+                    FileDragSourceView(
+                        url: url,
+                        useDirectURL: item.storage.isReference
+                    ) {
+                        if removeOnDragOut { onRemove() }
+                    }
+                }
+            }
+        )
         .contextMenu {
             Button("Open") { onOpen() }
             Button("Remove", role: .destructive) { onRemove() }
         }
-        .onTapGesture(count: 2) { onOpen() }
     }
 
     private func ageString(_ date: Date) -> String {

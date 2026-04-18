@@ -123,14 +123,15 @@ public final class FileThumbnailView: NSView, NSDraggingSource {
     }
 
     private func loadThumbnail() {
+        guard let fileURL = item.resolvedURL() else { return }
         // Start with workspace icon
-        let icon = NSWorkspace.shared.icon(forFile: item.shelfURL.path)
+        let icon = NSWorkspace.shared.icon(forFile: fileURL.path)
         icon.size = Self.thumbnailSize
         imageView.image = icon
 
         // Try QuickLook thumbnail for richer preview
         let request = QLThumbnailGenerator.Request(
-            fileAt: item.shelfURL,
+            fileAt: fileURL,
             size: Self.thumbnailSize,
             scale: NSScreen.main?.backingScaleFactor ?? 2.0,
             representationTypes: .thumbnail
@@ -195,7 +196,7 @@ public final class FileThumbnailView: NSView, NSDraggingSource {
         guard distance > 4 else { return }
         dragStartPoint = nil // prevent re-triggering
 
-        let fileURL = item.shelfURL
+        guard let fileURL = item.resolvedURL() else { return }
         let pasteboardItem = NSPasteboardItem()
         pasteboardItem.setString(fileURL.absoluteString, forType: .fileURL)
 

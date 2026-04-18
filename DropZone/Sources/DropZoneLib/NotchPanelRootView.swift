@@ -12,7 +12,7 @@ public struct NotchPanelRootView: View {
     private var targetSize: CGSize {
         switch viewModel.status {
         case .closed:
-            // Fully hidden when idle — don't render a visible pill under the notch.
+            // Fully hidden when idle with empty shelf.
             return .zero
         case .popping:
             let s = viewModel.geometry.preActivatedPanelSize
@@ -68,6 +68,8 @@ public struct NotchPanelRootView: View {
                     primaryFileName: viewModel.primaryFileName,
                     extraCount: viewModel.extraCount,
                     shelfCount: viewModel.shelfCount,
+                    items: viewModel.shelfManager?.items ?? [],
+                    isFileDragging: viewModel.isDragInside,
                     notchInset: 8
                 )
             }
@@ -76,6 +78,12 @@ public struct NotchPanelRootView: View {
                 height: viewModel.geometry.preActivatedPanelSize.height
             )
             .clipShape(NotchShape(topCornerRadius: targetTopRadius, bottomCornerRadius: targetBottomRadius))
+            // When this popping pill is idle (shelf has items but no active
+            // drag), a tap opens the full shelf.
+            .contentShape(Rectangle())
+            .onTapGesture {
+                if !viewModel.isDragInside { viewModel.status = .opened }
+            }
         case .opened:
             openedContent
         }
@@ -158,7 +166,7 @@ public struct NotchPanelRootView: View {
     }
 
     private func close() {
-        viewModel.forceClose()
+        viewModel.requestClose()
     }
 
     @ViewBuilder
@@ -185,25 +193,44 @@ public struct NotchPanelRootView: View {
     @ViewBuilder
     private func contentBody(shelfManager: FileShelfManager, mode: ShelfViewMode) -> some View {
         HStack(spacing: 14) {
-            let urls = shelfManager.items.map { $0.shelfURL }
+            let urls = shelfManager.items.compactMap { $0.resolvedURL() }
             AirDropActionView(
-                isEnabled: !urls.isEmpty,
-                onTap: { AirDropService.share(urls: urls) }
+                isEnabled: true,  // always accept drag-to-airdrop; tap only active when shelf non-empty
+                isDropTargeted: viewModel.isDragOverAirDrop,
+                onTap: {
+                    if !urls.isEmpty { AirDropService.share(urls: urls) }
+                },
+                onFrameChange: { [weak vm = viewModel] rect in
+                    // rect is in global screen coords; convert to the panel's
+                    // content-view coords (panel is top-anchored so Y flips).
+                    // We store raw global rect; forwarder will convert drop
+                    // points to global coords to compare.
+                    vm?.airDropRectInPanel = rect
+                }
             )
+            let removeOnDragOut = viewModel.settingsManager?.removeOnDragOut ?? true
             switch mode {
             case .thumbnail:
                 ShelfGridView(
                     items: shelfManager.items,
                     isDragInside: viewModel.isDragInside,
-                    onOpen: { item in NSWorkspace.shared.open(item.shelfURL) },
-                    onRemove: { [weak shelfManager] id in shelfManager?.removeItem(id) }
+                    removeOnDragOut: removeOnDragOut,
+                    onOpen: { item in
+                        if let url = item.resolvedURL() { NSWorkspace.shared.open(url) }
+                    },
+                    onRemove: { [weak shelfManager] id in shelfManager?.removeItem(id) },
+                    onRemoveAll: { [weak shelfManager] in shelfManager?.clearAll() }
                 )
             case .list:
                 ShelfListView(
                     items: shelfManager.items,
                     isDragInside: viewModel.isDragInside,
-                    onOpen: { item in NSWorkspace.shared.open(item.shelfURL) },
-                    onRemove: { [weak shelfManager] id in shelfManager?.removeItem(id) }
+                    removeOnDragOut: removeOnDragOut,
+                    onOpen: { item in
+                        if let url = item.resolvedURL() { NSWorkspace.shared.open(url) }
+                    },
+                    onRemove: { [weak shelfManager] id in shelfManager?.removeItem(id) },
+                    onRemoveAll: { [weak shelfManager] in shelfManager?.clearAll() }
                 )
             }
         }

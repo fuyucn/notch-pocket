@@ -11,8 +11,8 @@ struct ShelfListRowViewTests {
         ext: String? = "pdf"
     ) -> ShelfItem {
         ShelfItem(
-            originalURL: URL(fileURLWithPath: "/tmp/\(name)"),
-            shelfURL: URL(fileURLWithPath: "/tmp/shelf/\(name)"),
+            storage: .localCopy(URL(fileURLWithPath: "/tmp/shelf/\(name)")),
+            sourceURL: URL(fileURLWithPath: "/tmp/\(name)"),
             displayName: name,
             fileSize: size,
             sourceAppName: app,

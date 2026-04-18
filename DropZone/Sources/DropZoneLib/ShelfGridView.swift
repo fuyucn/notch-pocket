@@ -4,19 +4,25 @@ import SwiftUI
 public struct ShelfGridView: View {
     public let items: [ShelfItem]
     public let isDragInside: Bool
+    public let removeOnDragOut: Bool
     public let onOpen: (ShelfItem) -> Void
     public let onRemove: (UUID) -> Void
+    public let onRemoveAll: () -> Void
 
     public init(
         items: [ShelfItem],
         isDragInside: Bool = false,
+        removeOnDragOut: Bool = true,
         onOpen: @escaping (ShelfItem) -> Void,
-        onRemove: @escaping (UUID) -> Void
+        onRemove: @escaping (UUID) -> Void,
+        onRemoveAll: @escaping () -> Void = {}
     ) {
         self.items = items
         self.isDragInside = isDragInside
+        self.removeOnDragOut = removeOnDragOut
         self.onOpen = onOpen
         self.onRemove = onRemove
+        self.onRemoveAll = onRemoveAll
     }
 
     public var sortedItems: [ShelfItem] {
@@ -26,7 +32,7 @@ public struct ShelfGridView: View {
     public var body: some View {
         // Single container regardless of empty/non-empty so the drop target
         // frame doesn't reshuffle when the first file lands.
-        ZStack {
+        ZStack(alignment: .topTrailing) {
             RoundedRectangle(cornerRadius: 14, style: .continuous)
                 .fill(isDragInside ? Color.white.opacity(0.06) : Color.clear)
             RoundedRectangle(cornerRadius: 14, style: .continuous)
@@ -46,6 +52,7 @@ public struct ShelfGridView: View {
                         ForEach(sortedItems) { item in
                             ShelfGridCell(
                                 item: item,
+                                removeOnDragOut: removeOnDragOut,
                                 onOpen: { onOpen(item) },
                                 onRemove: { onRemove(item.id) }
                             )
@@ -54,6 +61,13 @@ public struct ShelfGridView: View {
                 }
                 .padding(12)
                 .frame(maxWidth: .infinity, minHeight: 76)
+            }
+            if !sortedItems.isEmpty {
+                AllDragHandle(
+                    items: sortedItems,
+                    onAllDelivered: { if removeOnDragOut { onRemoveAll() } }
+                )
+                .padding(6)
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -74,14 +88,17 @@ public struct ShelfGridView: View {
 }
 
 @MainActor
-private struct ShelfGridCell: View {
+struct ShelfGridCell: View {
     let item: ShelfItem
+    let removeOnDragOut: Bool
     let onOpen: () -> Void
     let onRemove: () -> Void
 
     @State private var isHovering = false
 
     var body: some View {
+        // .onDrag must be the outermost interaction — SwiftUI prefers
+        // gesture/tap handlers if they're on the same view.
         VStack(spacing: 6) {
             ZStack(alignment: .topTrailing) {
                 RoundedRectangle(cornerRadius: 8, style: .continuous)
@@ -116,15 +133,24 @@ private struct ShelfGridCell: View {
         .onHover { hovering in
             withAnimation(.easeInOut(duration: 0.12)) { isHovering = hovering }
         }
+        .overlay(
+            Group {
+                if let url = item.resolvedURL() {
+                    FileDragSourceView(
+                        url: url,
+                        useDirectURL: item.storage.isReference
+                    ) {
+                        if removeOnDragOut { onRemove() }
+                    }
+                }
+            }
+        )
         .contextMenu {
             Button("Open") { onOpen() }
             Button("Remove", role: .destructive) { onRemove() }
         }
-        .onTapGesture(count: 2) { onOpen() }
     }
 
-    /// Generic icon by file extension — keep it simple; QuickLook/FileThumbnailView
-    /// integration via NSViewRepresentable is a polish follow-up.
     private var iconName: String {
         guard let ext = item.fileExtension?.lowercased() else { return "doc" }
         switch ext {

@@ -4,19 +4,25 @@ import SwiftUI
 public struct ShelfListView: View {
     public let items: [ShelfItem]
     public let isDragInside: Bool
+    public let removeOnDragOut: Bool
     public let onOpen: (ShelfItem) -> Void
     public let onRemove: (UUID) -> Void
+    public let onRemoveAll: () -> Void
 
     public init(
         items: [ShelfItem],
         isDragInside: Bool = false,
+        removeOnDragOut: Bool = true,
         onOpen: @escaping (ShelfItem) -> Void,
-        onRemove: @escaping (UUID) -> Void
+        onRemove: @escaping (UUID) -> Void,
+        onRemoveAll: @escaping () -> Void = {}
     ) {
         self.items = items
         self.isDragInside = isDragInside
+        self.removeOnDragOut = removeOnDragOut
         self.onOpen = onOpen
         self.onRemove = onRemove
+        self.onRemoveAll = onRemoveAll
     }
 
     public var sortedItems: [ShelfItem] {
@@ -24,7 +30,7 @@ public struct ShelfListView: View {
     }
 
     public var body: some View {
-        ZStack {
+        ZStack(alignment: .topTrailing) {
             RoundedRectangle(cornerRadius: 14, style: .continuous)
                 .fill(isDragInside ? Color.white.opacity(0.06) : Color.clear)
             RoundedRectangle(cornerRadius: 14, style: .continuous)
@@ -44,6 +50,7 @@ public struct ShelfListView: View {
                         ForEach(sortedItems) { item in
                             ShelfListRowView(
                                 item: item,
+                                removeOnDragOut: removeOnDragOut,
                                 onOpen: { onOpen(item) },
                                 onRemove: { onRemove(item.id) }
                             )
@@ -51,6 +58,13 @@ public struct ShelfListView: View {
                         }
                     }
                 }
+                .padding(6)
+            }
+            if !sortedItems.isEmpty {
+                AllDragHandle(
+                    items: sortedItems,
+                    onAllDelivered: { if removeOnDragOut { onRemoveAll() } }
+                )
                 .padding(6)
             }
         }

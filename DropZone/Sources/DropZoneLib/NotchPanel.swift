@@ -82,20 +82,15 @@ public final class NotchPanel: NSPanel {
             MainActor.assumeIsolated {
                 guard let self else { return }
                 if self.viewModel.status == .opened {
-                    self.viewModel.forceClose()
+                    self.viewModel.requestClose()
                 }
             }
         }
 
-        // Observe mouse location from EventMonitors
-        EventMonitors.shared.mouseLocation
-            .combineLatest(EventMonitors.shared.isDragging)
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] point, dragging in
-                guard let self else { return }
-                self.viewModel.updateMouseLocation(point, isDragging: dragging)
-            }
-            .store(in: &cancellables)
+        // No global mouse monitor needed: drag-in activation is driven by
+        // NotchDropForwarder's NSDraggingDestination callbacks (which fire
+        // without any TCC permission because they're scoped to our own
+        // window). Click-outside-to-close runs off `NSWindow.didResignKey`.
     }
 
     // Only allow key-status when the shelf is opened; otherwise the panel
@@ -108,6 +103,14 @@ public final class NotchPanel: NSPanel {
     /// (without waiting for Combine dispatch).
     public func syncIgnoresMouseEvents() {
         ignoresMouseEvents = (viewModel.status == .closed)
+        // Hide the drop forwarder overlay when the panel shows interactive
+        // content (opened shelf) so taps reach the SwiftUI root view. For
+        // popping — which doubles as a tappable "minimized" indicator when
+        // the shelf has items — we also hide it so the tap gesture on the
+        // SwiftUI root fires. Drag-in still works because the hover rect
+        // and .opened transition are driven by the main panel drop
+        // destination, not this overlay.
+        dropForwarder?.isHidden = (viewModel.status == .opened)
     }
 
     public func updateGeometry(_ geometry: NotchGeometry) {

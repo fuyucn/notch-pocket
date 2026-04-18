@@ -21,8 +21,8 @@ public struct SettingsView: View {
     @State private var soundEffects: Bool
     @State private var shelfViewMode: ShelfViewMode
     @State private var shelfPersistence: ShelfPersistence
-    @State private var inputMonitoringStatus: PermissionStatus = .undetermined
-    @State private var permissionsManager = PermissionsManager()
+    @State private var removeOnDragOut: Bool
+    @State private var storageMode: ShelfStorageMode
 
     public init(settingsManager: SettingsManager) {
         self.settingsManager = settingsManager
@@ -34,6 +34,8 @@ public struct SettingsView: View {
         _soundEffects = State(initialValue: settingsManager.soundEffectsEnabled)
         _shelfViewMode = State(initialValue: settingsManager.shelfViewMode)
         _shelfPersistence = State(initialValue: settingsManager.shelfPersistence)
+        _removeOnDragOut = State(initialValue: settingsManager.removeOnDragOut)
+        _storageMode = State(initialValue: settingsManager.storageMode)
     }
 
     public var body: some View {
@@ -125,44 +127,26 @@ public struct SettingsView: View {
                     .onChange(of: shelfPersistence) { _, newValue in
                         settingsManager.shelfPersistence = newValue
                     }
-                }
-            Section("Permissions") {
-                    HStack {
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("Input Monitoring")
-                                .font(.system(size: 13, weight: .medium))
-                            Text("Required to detect when you hover or drag files near the notch.")
-                                .font(.system(size: 11))
-                                .foregroundStyle(.secondary)
-                        }
-                        Spacer()
-                        switch inputMonitoringStatus {
-                        case .granted:
-                            Text("Granted")
-                                .font(.system(size: 11, weight: .semibold))
-                                .foregroundStyle(.green)
-                        case .denied, .undetermined:
-                            Button("Grant…") {
-                                if !permissionsManager.requestInputMonitoring() {
-                                    permissionsManager.openInputMonitoringSettings()
-                                }
-                                // Re-check after a short delay
-                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                                    inputMonitoringStatus = permissionsManager.inputMonitoringStatus
-                                }
-                            }
-                            .controlSize(.small)
+
+                    Picker("Storage", selection: $storageMode) {
+                        ForEach(ShelfStorageMode.allCases, id: \.self) { mode in
+                            Text(mode.label).tag(mode)
                         }
                     }
-                    .padding(.vertical, 4)
+                    .pickerStyle(.segmented)
+                    .onChange(of: storageMode) { _, newValue in
+                        settingsManager.storageMode = newValue
+                    }
+
+                    Toggle("Remove files from shelf after drag-out", isOn: $removeOnDragOut)
+                        .onChange(of: removeOnDragOut) { _, newValue in
+                            settingsManager.removeOnDragOut = newValue
+                        }
                 }
         }
         .formStyle(.grouped)
-        .frame(width: 380, height: 480)
+        .frame(width: 380, height: 420)
         .fixedSize()
-        .onAppear {
-            inputMonitoringStatus = permissionsManager.inputMonitoringStatus
-        }
     }
 
     private var storageLabel: String {

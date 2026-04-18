@@ -10,8 +10,8 @@ struct FileShelfViewTests {
     private func makeTestItem(name: String = "test.txt", id: UUID = UUID()) -> ShelfItem {
         ShelfItem(
             id: id,
-            originalURL: URL(fileURLWithPath: "/tmp/original/\(name)"),
-            shelfURL: URL(fileURLWithPath: "/tmp/shelf/\(name)"),
+            storage: .localCopy(URL(fileURLWithPath: "/tmp/shelf/\(name)")),
+            sourceURL: URL(fileURLWithPath: "/tmp/original/\(name)"),
             displayName: name,
             fileSize: 1024
         )

@@ -16,6 +16,14 @@ public final class NotchViewModel: ObservableObject {
     /// True when a file drag is currently inside the panel's drop forwarder —
     /// used to highlight the drop target (dashed border, fill) in the opened UI.
     @Published public var isDragInside: Bool = false
+    /// AirDrop button frame in global screen coordinates, reported by SwiftUI
+    /// via GeometryReader. `nil` when the button isn't on screen. Used by
+    /// `NotchDropForwarder` to steer drops on the AirDrop region to AirDrop
+    /// instead of the shelf.
+    public var airDropRectInPanel: NSRect?
+    /// True while the drag cursor is inside `airDropRectInPanel`. Published
+    /// so the AirDrop button can highlight.
+    @Published public var isDragOverAirDrop: Bool = false
     /// Incremented whenever the shelf content changes, so SwiftUI consumers can
     /// re-bind their NSViewRepresentable to pick up manager state.
     @Published public var shelfRefreshToken: Int = 0
@@ -48,13 +56,19 @@ public final class NotchViewModel: ObservableObject {
 
     /// Drive the status from a pointer location + drag flag.
     /// When already `.opened`, this is a no-op — the shelf is explicitly
-    /// dismissed via `forceClose()`.
+    /// dismissed via `forceClose()` or `requestClose()`.
+    ///
+    /// When the shelf has items, the idle state is `.popping` (the pill
+    /// stays as a "you have files here" indicator). When the shelf is
+    /// empty, the idle state is `.closed`.
     public func updateMouseLocation(_ point: NSPoint, isDragging: Bool) {
         if status == .opened {
             return
         }
         guard isDragging else {
-            if status != .closed { status = .closed }
+            // Not dragging: settle to popping-if-items-else-closed.
+            let target = idleStatus
+            if status != target { status = target }
             return
         }
         if geometry.activationZone.contains(point) {
@@ -62,12 +76,34 @@ public final class NotchViewModel: ObservableObject {
         } else if geometry.hoverTriggerRect.contains(point) {
             if status != .popping { status = .popping }
         } else {
-            if status != .closed { status = .closed }
+            // Cursor outside the hover rect while dragging — fall back to
+            // the idle state (popping if shelf has items, else closed).
+            let target = idleStatus
+            if status != target { status = target }
         }
     }
 
+    /// Close unconditionally — always goes to `.closed` regardless of shelf content.
+    /// Use for quit / teardown paths.
     public func forceClose() {
         status = .closed
         openStickyUntil = nil
+    }
+
+    /// Smart close: falls back to the idle state — `.popping` if the shelf
+    /// has items (acts as a minimized indicator), `.closed` otherwise.
+    /// Use for click-outside / × button / keyboard shortcut dismiss paths.
+    public func requestClose() {
+        status = idleStatus
+        openStickyUntil = nil
+    }
+
+    // MARK: - Helpers
+
+    /// The resting state when there's no drag and no user-invoked opening:
+    /// `.popping` when the shelf has at least one item (so the pill stays
+    /// visible as a "files are here" reminder); `.closed` otherwise.
+    public var idleStatus: Status {
+        shelfCount > 0 ? .popping : .closed
     }
 }

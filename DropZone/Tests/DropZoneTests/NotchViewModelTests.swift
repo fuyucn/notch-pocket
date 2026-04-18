@@ -106,4 +106,44 @@ struct NotchViewModelTests {
         vm.shelfRefreshToken &+= 1
         #expect(vm.shelfRefreshToken == 1)
     }
+
+    // MARK: - idle state (popping-as-minimized when shelf has items)
+
+    @Test @MainActor
+    func requestCloseWithEmptyShelfGoesToClosed() {
+        let vm = makeVM()
+        vm.markDropped()
+        #expect(vm.status == .opened)
+        vm.shelfCount = 0
+        vm.requestClose()
+        #expect(vm.status == .closed)
+    }
+
+    @Test @MainActor
+    func requestCloseWithItemsStaysInPoppingAsIdle() {
+        let vm = makeVM()
+        vm.markDropped()
+        #expect(vm.status == .opened)
+        vm.shelfCount = 3
+        vm.requestClose()
+        #expect(vm.status == .popping)
+    }
+
+    @Test @MainActor
+    func forceCloseAlwaysGoesToClosedRegardlessOfShelfCount() {
+        let vm = makeVM()
+        vm.markDropped()
+        vm.shelfCount = 5
+        vm.forceClose()
+        #expect(vm.status == .closed)
+    }
+
+    @Test @MainActor
+    func idleStatusReflectsShelfCount() {
+        let vm = makeVM()
+        vm.shelfCount = 0
+        #expect(vm.idleStatus == .closed)
+        vm.shelfCount = 2
+        #expect(vm.idleStatus == .popping)
+    }
 }
