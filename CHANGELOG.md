@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v0.4.4] — 2026-04-17
+
+Restore input-monitor-driven drag-in detection. Without it, dragging a file toward the notch never reached `NotchDropForwarder` because `ignoresMouseEvents = true` suppresses `NSDraggingDestination` dispatch.
+
+### Changed
+- Reverted the `b067d13` removal of `EventMonitor` / `EventMonitors` / `PermissionsManager`. Input Monitor permission is required again for drag-in activation.
+
 ## [v0.4.3] — 2026-04-17
 
 Revert the v0.4.2 `.minimized` / popping-as-idle work — drag-in near the notch regressed across several attempts. Tree now matches v0.4.1 behavior. v0.4.2 tag remains for history.
