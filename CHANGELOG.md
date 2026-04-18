@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v0.4.5] — 2026-04-18
+
+### Changed
+- Opened shelf top bar: logo left-aligned to AirDrop's left edge; right-side actions right-aligned to the shelf content's right edge (40pt horizontal padding on both sides). Popping pill layout unchanged.
+
 ## [v0.4.4] — 2026-04-17
 
 Restore input-monitor-driven drag-in detection. Without it, dragging a file toward the notch never reached `NotchDropForwarder` because `ignoresMouseEvents = true` suppresses `NSDraggingDestination` dispatch.

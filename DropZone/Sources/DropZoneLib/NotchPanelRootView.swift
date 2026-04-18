@@ -84,10 +84,15 @@ public struct NotchPanelRootView: View {
     /// Horizontal strip at the very top of the panel that sits alongside the
     /// physical notch. Left shoulder: logo + title. Right shoulder: shelf-count
     /// badge (popping) or view-toggle + close buttons (opened).
+    ///
+    /// `opened` aligns the left/right shoulders with the content area
+    /// (40pt horizontal padding on both sides). `popping` keeps the shoulders
+    /// hugging the notch so the tiny pill looks balanced.
     @ViewBuilder
     private var notchTopBar: some View {
         let notchHeight = viewModel.geometry.notchRect?.height ?? 32
         let notchWidth = viewModel.geometry.notchRect?.width ?? 200
+        let isOpened = viewModel.status == .opened
         HStack(spacing: 0) {
             // Left shoulder — logo + title
             HStack(spacing: 6) {
@@ -99,15 +104,17 @@ public struct NotchPanelRootView: View {
                     .foregroundStyle(.white.opacity(0.9))
                     .lineLimit(1)
             }
-            .frame(maxWidth: .infinity, alignment: .trailing)
-            .padding(.trailing, 10)
+            .frame(maxWidth: .infinity, alignment: isOpened ? .leading : .trailing)
+            .padding(.leading, isOpened ? 40 : 0)
+            .padding(.trailing, isOpened ? 0 : 10)
             // Reserve exact notch width so the left/right content ends up on
             // the notch's shoulders, not under the physical cutout.
             Color.clear.frame(width: notchWidth)
             // Right shoulder
             rightShoulder
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.leading, 10)
+                .frame(maxWidth: .infinity, alignment: isOpened ? .trailing : .leading)
+                .padding(.leading, isOpened ? 0 : 10)
+                .padding(.trailing, isOpened ? 40 : 0)
         }
         .frame(height: notchHeight)
     }
