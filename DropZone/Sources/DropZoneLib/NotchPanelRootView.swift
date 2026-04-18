@@ -185,7 +185,7 @@ public struct NotchPanelRootView: View {
     @ViewBuilder
     private func contentBody(shelfManager: FileShelfManager, mode: ShelfViewMode) -> some View {
         HStack(spacing: 14) {
-            let urls = shelfManager.items.map { $0.shelfURL }
+            let urls = shelfManager.items.compactMap { $0.resolvedURL() }
             AirDropActionView(
                 isEnabled: true,  // always accept drag-to-airdrop; tap only active when shelf non-empty
                 isDropTargeted: viewModel.isDragOverAirDrop,
@@ -207,7 +207,9 @@ public struct NotchPanelRootView: View {
                     items: shelfManager.items,
                     isDragInside: viewModel.isDragInside,
                     removeOnDragOut: removeOnDragOut,
-                    onOpen: { item in NSWorkspace.shared.open(item.shelfURL) },
+                    onOpen: { item in
+                        if let url = item.resolvedURL() { NSWorkspace.shared.open(url) }
+                    },
                     onRemove: { [weak shelfManager] id in shelfManager?.removeItem(id) },
                     onRemoveAll: { [weak shelfManager] in shelfManager?.clearAll() }
                 )
@@ -216,7 +218,9 @@ public struct NotchPanelRootView: View {
                     items: shelfManager.items,
                     isDragInside: viewModel.isDragInside,
                     removeOnDragOut: removeOnDragOut,
-                    onOpen: { item in NSWorkspace.shared.open(item.shelfURL) },
+                    onOpen: { item in
+                        if let url = item.resolvedURL() { NSWorkspace.shared.open(url) }
+                    },
                     onRemove: { [weak shelfManager] id in shelfManager?.removeItem(id) },
                     onRemoveAll: { [weak shelfManager] in shelfManager?.clearAll() }
                 )

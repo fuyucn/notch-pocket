@@ -134,11 +134,15 @@ struct ShelfGridCell: View {
             withAnimation(.easeInOut(duration: 0.12)) { isHovering = hovering }
         }
         .overlay(
-            FileDragSourceView(url: item.shelfURL) {
-                // `onDelivered` only fires after the receiver successfully
-                // fetched the file, so it's a reliable "drop succeeded"
-                // signal. `removeOnDragOut` setting decides shelf behavior.
-                if removeOnDragOut { onRemove() }
+            Group {
+                if let url = item.resolvedURL() {
+                    FileDragSourceView(
+                        url: url,
+                        useDirectURL: item.storage.isReference
+                    ) {
+                        if removeOnDragOut { onRemove() }
+                    }
+                }
             }
         )
         .contextMenu {

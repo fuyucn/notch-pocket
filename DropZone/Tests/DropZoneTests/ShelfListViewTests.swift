@@ -6,8 +6,8 @@ import Foundation
 struct ShelfListViewTests {
     private func item(_ name: String, added: Date) -> ShelfItem {
         ShelfItem(
-            originalURL: URL(fileURLWithPath: "/tmp/\(name)"),
-            shelfURL: URL(fileURLWithPath: "/tmp/shelf/\(name)"),
+            storage: .localCopy(URL(fileURLWithPath: "/tmp/shelf/\(name)")),
+            sourceURL: URL(fileURLWithPath: "/tmp/\(name)"),
             displayName: name,
             addedAt: added,
             fileSize: 100,

@@ -17,11 +17,14 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
         let settings = SettingsManager()
         settingsManager = settings
 
-        let shelfManager = FileShelfManager()
+        let shelfManager = FileShelfManager(
+            storageModeProvider: { [weak settings] in settings?.storageMode ?? .reference }
+        )
         shelfManager.maxItems = settings.maxShelfItems
         shelfManager.maxTotalBytes = settings.maxStorageBytes
         shelfManager.expiryInterval = settings.expiryInterval
         try? shelfManager.ensureShelfDirectory()
+        shelfManager.validateItems() // Drop stale reference-mode entries on launch
         shelfManager.startExpiryTimer()
         fileShelfManager = shelfManager
 

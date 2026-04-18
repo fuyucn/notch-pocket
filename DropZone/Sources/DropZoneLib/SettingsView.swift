@@ -22,6 +22,7 @@ public struct SettingsView: View {
     @State private var shelfViewMode: ShelfViewMode
     @State private var shelfPersistence: ShelfPersistence
     @State private var removeOnDragOut: Bool
+    @State private var storageMode: ShelfStorageMode
     @State private var inputMonitoringStatus: PermissionStatus = .undetermined
     @State private var permissionsManager = PermissionsManager()
 
@@ -36,6 +37,7 @@ public struct SettingsView: View {
         _shelfViewMode = State(initialValue: settingsManager.shelfViewMode)
         _shelfPersistence = State(initialValue: settingsManager.shelfPersistence)
         _removeOnDragOut = State(initialValue: settingsManager.removeOnDragOut)
+        _storageMode = State(initialValue: settingsManager.storageMode)
     }
 
     public var body: some View {
@@ -126,6 +128,16 @@ public struct SettingsView: View {
                     .pickerStyle(.segmented)
                     .onChange(of: shelfPersistence) { _, newValue in
                         settingsManager.shelfPersistence = newValue
+                    }
+
+                    Picker("Storage", selection: $storageMode) {
+                        ForEach(ShelfStorageMode.allCases, id: \.self) { mode in
+                            Text(mode.label).tag(mode)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                    .onChange(of: storageMode) { _, newValue in
+                        settingsManager.storageMode = newValue
                     }
 
                     Toggle("Remove files from shelf after drag-out", isOn: $removeOnDragOut)

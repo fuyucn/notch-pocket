@@ -13,6 +13,23 @@ private enum SettingsKey {
     static let shelfViewMode = "shelfViewMode"
     static let shelfPersistence = "shelfPersistence"
     static let removeOnDragOut = "removeOnDragOut"
+    static let storageMode = "storageMode"
+}
+
+/// Whether shelf items are stored as a bookmark reference to the original file
+/// or as a local copy in the shelf directory.
+public enum ShelfStorageMode: Int, CaseIterable, Sendable {
+    /// Bookmark pointing at the original file (zero extra disk, avoids -8058).
+    case reference = 0
+    /// Copy of the file stored in the shelf directory (safe if original is deleted).
+    case localCopy = 1
+
+    public var label: String {
+        switch self {
+        case .reference: "Reference"
+        case .localCopy: "Local copy"
+        }
+    }
 }
 
 /// Animation speed presets.
@@ -95,6 +112,7 @@ public final class SettingsManager {
             SettingsKey.shelfViewMode: ShelfViewMode.list.rawValue,
             SettingsKey.shelfPersistence: ShelfPersistence.persistent.rawValue,
             SettingsKey.removeOnDragOut: true,
+            SettingsKey.storageMode: ShelfStorageMode.reference.rawValue,
         ])
     }
 
@@ -233,6 +251,21 @@ public final class SettingsManager {
         get { defaults.bool(forKey: SettingsKey.removeOnDragOut) }
         set {
             defaults.set(newValue, forKey: SettingsKey.removeOnDragOut)
+            notifyChanged()
+        }
+    }
+
+    // MARK: - Storage Mode
+
+    /// Whether newly added shelf items are stored as bookmark references or
+    /// local copies. Applies to future adds only; existing items are unaffected.
+    public var storageMode: ShelfStorageMode {
+        get {
+            let raw = defaults.integer(forKey: SettingsKey.storageMode)
+            return ShelfStorageMode(rawValue: raw) ?? .reference
+        }
+        set {
+            defaults.set(newValue.rawValue, forKey: SettingsKey.storageMode)
             notifyChanged()
         }
     }

@@ -85,8 +85,15 @@ public struct ShelfListRowView: View {
             withAnimation(.easeInOut(duration: 0.12)) { isHovering = hovering }
         }
         .overlay(
-            FileDragSourceView(url: item.shelfURL) {
-                if removeOnDragOut { onRemove() }
+            Group {
+                if let url = item.resolvedURL() {
+                    FileDragSourceView(
+                        url: url,
+                        useDirectURL: item.storage.isReference
+                    ) {
+                        if removeOnDragOut { onRemove() }
+                    }
+                }
             }
         )
         .contextMenu {

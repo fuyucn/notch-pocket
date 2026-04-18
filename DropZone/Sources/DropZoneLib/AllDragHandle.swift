@@ -3,10 +3,15 @@ import AppKit
 import UniformTypeIdentifiers
 
 /// A small pill-shaped SwiftUI view that, when pressed and dragged, starts a
-/// native `NSDraggingSession` carrying every shelf file as an
-/// `NSFilePromiseProvider`. The promise mechanism avoids -8058 by ensuring
-/// Finder never operates on our shelf file directly — instead AppKit calls
-/// us back with a scratch URL that we copy into.
+/// native `NSDraggingSession` carrying every shelf file.
+///
+/// - If **all** items are reference-mode, the real file URLs are placed
+///   directly on the drag session. `endedAt:operation:` is reliable in this
+///   case.
+/// - If **any** item is local-copy mode, all items go through
+///   `NSFilePromiseProvider` to avoid -8058. The promise writer being
+///   invoked is the success signal.
+/// - Items whose `resolvedURL()` is nil are silently skipped.
 @MainActor
 public struct AllDragHandle: View {
     public let items: [ShelfItem]
@@ -24,7 +29,7 @@ public struct AllDragHandle: View {
 
     public var body: some View {
         MultiFileDragSourceView(
-            urls: items.map { $0.shelfURL },
+            items: items,
             onAllDelivered: onAllDelivered
         )
         .frame(width: 44, height: 22)
@@ -47,30 +52,33 @@ public struct AllDragHandle: View {
 
 @MainActor
 private struct MultiFileDragSourceView: NSViewRepresentable {
-    let urls: [URL]
+    let items: [ShelfItem]
     let onAllDelivered: () -> Void
 
     func makeNSView(context: Context) -> DragSourceNSView {
         let v = DragSourceNSView()
-        v.urls = urls
+        v.items = items
         v.onAllDelivered = onAllDelivered
         return v
     }
 
     func updateNSView(_ nsView: DragSourceNSView, context: Context) {
-        nsView.urls = urls
+        nsView.items = items
         nsView.onAllDelivered = onAllDelivered
     }
 }
 
 @MainActor
 private final class DragSourceNSView: NSView, NSDraggingSource, NSFilePromiseProviderDelegate {
-    var urls: [URL] = []
+    var items: [ShelfItem] = []
     var onAllDelivered: () -> Void = {}
     /// Bumped on each successful `writePromiseTo`. When it matches the
     /// current session's expected count, we fire `onAllDelivered` once.
     private var deliveredCount: Int = 0
     private var expectedCount: Int = 0
+    /// Whether the current session uses direct URLs (all reference) or
+    /// the promise path (any local-copy).
+    private var sessionUsesDirectURL: Bool = false
 
     private let ioQueue: OperationQueue = {
         let q = OperationQueue()
@@ -86,26 +94,44 @@ private final class DragSourceNSView: NSView, NSDraggingSource, NSFilePromisePro
     required init?(coder: NSCoder) { nil }
 
     override func mouseDown(with event: NSEvent) {
-        guard !urls.isEmpty else {
+        // Resolve each item, skipping any whose file is gone.
+        let resolved: [(item: ShelfItem, url: URL)] = items.compactMap { item in
+            guard let url = item.resolvedURL() else { return nil }
+            return (item, url)
+        }
+        guard !resolved.isEmpty else {
             super.mouseDown(with: event)
             return
         }
 
         deliveredCount = 0
-        expectedCount = urls.count
+        expectedCount = resolved.count
 
-        let items = urls.map { url -> NSDraggingItem in
-            let utType = (try? url.resourceValues(forKeys: [.contentTypeKey]))?.contentType
-                ?? UTType(filenameExtension: url.pathExtension)
-                ?? .data
-            let provider = NSFilePromiseProvider(fileType: utType.identifier, delegate: self)
-            provider.userInfo = url
-            let item = NSDraggingItem(pasteboardWriter: provider)
-            item.draggingFrame = NSRect(x: 0, y: 0, width: 32, height: 32)
-            return item
+        // Use direct URLs only when every resolved item is a reference.
+        let allReference = resolved.allSatisfy { $0.item.storage.isReference }
+        sessionUsesDirectURL = allReference
+
+        let draggingItems: [NSDraggingItem]
+        if allReference {
+            draggingItems = resolved.map { (_, url) in
+                let di = NSDraggingItem(pasteboardWriter: url as NSURL)
+                di.draggingFrame = NSRect(x: 0, y: 0, width: 32, height: 32)
+                return di
+            }
+        } else {
+            draggingItems = resolved.map { (_, url) in
+                let utType = (try? url.resourceValues(forKeys: [.contentTypeKey]))?.contentType
+                    ?? UTType(filenameExtension: url.pathExtension)
+                    ?? .data
+                let provider = NSFilePromiseProvider(fileType: utType.identifier, delegate: self)
+                provider.userInfo = url
+                let di = NSDraggingItem(pasteboardWriter: provider)
+                di.draggingFrame = NSRect(x: 0, y: 0, width: 32, height: 32)
+                return di
+            }
         }
 
-        beginDraggingSession(with: items, event: event, source: self)
+        beginDraggingSession(with: draggingItems, event: event, source: self)
     }
 
     // MARK: - NSDraggingSource
@@ -117,7 +143,20 @@ private final class DragSourceNSView: NSView, NSDraggingSource, NSFilePromisePro
         return [.copy, .move, .generic]
     }
 
-    // endedAt:operation: intentionally unused — see FileDragSourceView.
+    nonisolated func draggingSession(
+        _ session: NSDraggingSession,
+        endedAt screenPoint: NSPoint,
+        operation: NSDragOperation
+    ) {
+        // For all-reference sessions, use `endedAt:operation:` as the
+        // delivery signal instead of the promise path.
+        guard MainActor.assumeIsolated({ sessionUsesDirectURL }) else { return }
+        if !operation.isEmpty {
+            Task { @MainActor [weak self] in
+                self?.onAllDelivered()
+            }
+        }
+    }
 
     // MARK: - NSFilePromiseProviderDelegate
 

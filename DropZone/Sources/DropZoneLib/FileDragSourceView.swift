@@ -2,37 +2,45 @@ import AppKit
 import SwiftUI
 import UniformTypeIdentifiers
 
-/// SwiftUI bridge around an AppKit drag source that uses
-/// `NSFilePromiseProvider` to hand files out to Finder / other apps.
+/// SwiftUI bridge around an AppKit drag source.
 ///
-/// The receiver (Finder etc.) asks us for the file *only* when the drop is
-/// accepted — so `filePromiseProvider(_:writePromiseTo:...)` being invoked
-/// at all is our "drop succeeded" signal. That's the trigger we use to
-/// remove from the shelf (if the user's setting says so), because
-/// `draggingSession(_:endedAt:operation:)` for promise drags almost always
-/// reports `.copy` regardless of the receiver's actual intent.
+/// - When `useDirectURL` is `false` (default / local-copy mode): uses
+///   `NSFilePromiseProvider` to hand files to Finder. The promise writer
+///   being invoked is the "drop succeeded" signal used to remove the item from
+///   the shelf, because `draggingSession(_:endedAt:operation:)` for promise
+///   drags almost always reports `.copy` regardless of the receiver's actual
+///   intent.
+///
+/// - When `useDirectURL` is `true` (reference mode): places the real file URL
+///   directly on the drag pasteboard. Avoids the promise copy, which would
+///   silently duplicate the file. In this mode `endedAt:operation:` is
+///   reliable — `onDelivered` fires there for any non-empty operation.
 @MainActor
 public struct FileDragSourceView: NSViewRepresentable {
     public let url: URL
-    /// Called from the promise writer after the file has been delivered to
-    /// the receiver (i.e. drop succeeded). Caller decides whether to remove
-    /// the item from the shelf.
+    /// When true the drag uses the direct-URL path (reference mode).
+    public let useDirectURL: Bool
+    /// Called after the file has been delivered to the receiver (drop
+    /// succeeded). Caller decides whether to remove the item from the shelf.
     public let onDelivered: () -> Void
 
-    public init(url: URL, onDelivered: @escaping () -> Void) {
+    public init(url: URL, useDirectURL: Bool = false, onDelivered: @escaping () -> Void) {
         self.url = url
+        self.useDirectURL = useDirectURL
         self.onDelivered = onDelivered
     }
 
     public func makeNSView(context: Context) -> FileDragSourceNSView {
         let v = FileDragSourceNSView()
         v.url = url
+        v.useDirectURL = useDirectURL
         v.onDelivered = onDelivered
         return v
     }
 
     public func updateNSView(_ nsView: FileDragSourceNSView, context: Context) {
         nsView.url = url
+        nsView.useDirectURL = useDirectURL
         nsView.onDelivered = onDelivered
     }
 }
@@ -40,6 +48,7 @@ public struct FileDragSourceView: NSViewRepresentable {
 @MainActor
 public final class FileDragSourceNSView: NSView, NSDraggingSource, NSFilePromiseProviderDelegate {
     public var url: URL = URL(fileURLWithPath: "/")
+    public var useDirectURL: Bool = false
     public var onDelivered: () -> Void = {}
 
     /// Queue the promise provider uses to perform file I/O off the main thread.
@@ -57,16 +66,25 @@ public final class FileDragSourceNSView: NSView, NSDraggingSource, NSFilePromise
     public required init?(coder: NSCoder) { nil }
 
     public override func mouseDown(with event: NSEvent) {
-        let utType = (try? url.resourceValues(forKeys: [.contentTypeKey]))?.contentType
-            ?? UTType(filenameExtension: url.pathExtension)
-            ?? .data
-        let provider = NSFilePromiseProvider(fileType: utType.identifier, delegate: self)
-        provider.userInfo = url
+        if useDirectURL {
+            // Reference mode: hand the real URL straight to the drag session.
+            let item = NSDraggingItem(pasteboardWriter: url as NSURL)
+            item.draggingFrame = bounds
+            beginDraggingSession(with: [item], event: event, source: self)
+        } else {
+            // Local-copy mode: use NSFilePromiseProvider so Finder never
+            // touches our Application Support file directly (avoids -8058).
+            let utType = (try? url.resourceValues(forKeys: [.contentTypeKey]))?.contentType
+                ?? UTType(filenameExtension: url.pathExtension)
+                ?? .data
+            let provider = NSFilePromiseProvider(fileType: utType.identifier, delegate: self)
+            provider.userInfo = url
 
-        let item = NSDraggingItem(pasteboardWriter: provider)
-        item.draggingFrame = NSRect(x: 0, y: 0, width: bounds.width, height: bounds.height)
+            let item = NSDraggingItem(pasteboardWriter: provider)
+            item.draggingFrame = NSRect(x: 0, y: 0, width: bounds.width, height: bounds.height)
 
-        beginDraggingSession(with: [item], event: event, source: self)
+            beginDraggingSession(with: [item], event: event, source: self)
+        }
     }
 
     // MARK: - NSDraggingSource
@@ -79,9 +97,20 @@ public final class FileDragSourceNSView: NSView, NSDraggingSource, NSFilePromise
         return [.copy, .move, .generic]
     }
 
-    // NSDraggingSource endedAt:operation: is intentionally not used for
-    // shelf removal — see the note above. We rely on the promise writer
-    // being invoked.
+    nonisolated public func draggingSession(
+        _ session: NSDraggingSession,
+        endedAt screenPoint: NSPoint,
+        operation: NSDragOperation
+    ) {
+        // For reference-mode (direct URL) drags, `endedAt:operation:` is
+        // reliable. Fire `onDelivered` on any successful operation.
+        guard MainActor.assumeIsolated({ useDirectURL }) else { return }
+        if !operation.isEmpty {
+            Task { @MainActor [weak self] in
+                self?.onDelivered()
+            }
+        }
+    }
 
     // MARK: - NSFilePromiseProviderDelegate
 

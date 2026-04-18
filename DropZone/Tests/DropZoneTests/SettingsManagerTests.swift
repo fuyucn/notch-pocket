@@ -26,6 +26,7 @@ struct SettingsManagerTests {
         #expect(manager.expiryInterval == 3600)
         #expect(manager.soundEffectsEnabled == true)
         #expect(manager.showOnAllDisplays == false)
+        #expect(manager.storageMode == .reference)
     }
 
     // MARK: - Launch at Login
@@ -281,6 +282,52 @@ struct SettingsManagerTests {
     func animationSpeedUniqueness() {
         let multipliers = AnimationSpeed.allCases.map(\.durationMultiplier)
         #expect(Set(multipliers).count == multipliers.count) // All unique
+    }
+
+    // MARK: - Storage Mode
+
+    @Test("storageMode defaults to reference")
+    func storageModeDefaultsToReference() {
+        let manager = makeManager()
+        #expect(manager.storageMode == .reference)
+    }
+
+    @Test("storageMode round-trips through raw value")
+    func storageModeRoundTrip() {
+        let manager = makeManager()
+        for mode in ShelfStorageMode.allCases {
+            manager.storageMode = mode
+            #expect(manager.storageMode == mode)
+        }
+    }
+
+    @Test("ShelfStorageMode labels are non-empty")
+    func storageModeLabels() {
+        for mode in ShelfStorageMode.allCases {
+            #expect(!mode.label.isEmpty)
+        }
+    }
+
+    @Test("storageMode persists across instances")
+    func storageModePersistedAcrossInstances() {
+        let suiteName = "com.dropzone.test.storageMode.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        let m1 = SettingsManager(defaults: defaults)
+        m1.storageMode = .localCopy
+        let m2 = SettingsManager(defaults: defaults)
+        #expect(m2.storageMode == .localCopy)
+    }
+
+    @Test("Invalid storageMode raw value falls back to reference")
+    func invalidStorageModeFallsBackToReference() {
+        let suiteName = "com.dropzone.test.storageMode.invalid.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        defaults.set(999, forKey: "storageMode") // Invalid raw value
+        let manager = SettingsManager(defaults: defaults)
+        #expect(manager.storageMode == .reference)
     }
 
     // MARK: - Shelf View Mode
