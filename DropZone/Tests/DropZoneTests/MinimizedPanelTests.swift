@@ -64,4 +64,22 @@ struct MinimizedPanelTests {
         panel.handleTap()
         #expect(vm.status == .opened)
     }
+
+    @Test @MainActor
+    func updateGeometryRepositionsPanel() {
+        let geo = makeGeometry()
+        let vm = NotchViewModel(geometry: geo)
+        let panel = MinimizedPanel(viewModel: vm)
+        let newGeo = NotchGeometry(
+            notchRect: NSRect(x: 800, y: 950, width: 220, height: 32),
+            activationZone: NSRect(x: 770, y: 890, width: 280, height: 102),
+            screenFrame: NSRect(x: 0, y: 0, width: 1800, height: 1000),
+            hasNotch: true
+        )
+        panel.updateGeometry(newGeo)
+        let expectedWidth = newGeo.notchRect!.width + 2 * MinimizedBarView.shoulderWidth
+        #expect(panel.frame.width == expectedWidth)
+        #expect(panel.frame.midX == newGeo.notchRect!.midX)
+        #expect(panel.frame.maxY == newGeo.screenFrame.maxY)
+    }
 }

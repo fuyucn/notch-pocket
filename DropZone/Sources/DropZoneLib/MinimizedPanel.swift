@@ -46,8 +46,6 @@ public final class MinimizedPanel: NSPanel {
         contentView = host
         hostingView = host
 
-        setFrame(rect, display: false)
-
         // Rebind SwiftUI whenever the shelf count changes, so the count badge
         // stays live.
         viewModel.$shelfCount
@@ -85,9 +83,9 @@ public final class MinimizedPanel: NSPanel {
         })
     }
 
-    /// Test-only hook + the action fired by the SwiftUI tap gesture.
+    /// Action fired by the SwiftUI tap gesture. Public so tests can simulate it.
     public func handleTap() {
-        viewModel.status = .opened
+        viewModel.markDropped()
     }
 
     public func updateGeometry(_ geometry: NotchGeometry) {
