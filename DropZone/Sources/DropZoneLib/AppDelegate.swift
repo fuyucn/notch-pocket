@@ -50,17 +50,6 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
             vm.primaryFileName = inside ? names.first : nil
             vm.extraCount = inside ? max(0, names.count - 1) : 0
             if !inside { vm.isDragOverAirDrop = false }
-            // Drive the popping pill directly from drag-in/out — we used to
-            // rely on the (since-removed) global mouse monitor to update
-            // status. Keep opened state untouched; drop success upgrades to
-            // opened via markDropped below.
-            if vm.status != .opened {
-                if inside {
-                    vm.status = .popping
-                } else {
-                    vm.status = vm.idleStatus
-                }
-            }
         }
         panel.dropForwarder?.onDragMoved = { [weak vm] pointInView in
             guard let vm else { return }
