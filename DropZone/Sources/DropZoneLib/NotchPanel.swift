@@ -115,17 +115,11 @@ public final class NotchPanel: NSPanel {
         setFrame(Self.containerFrame(for: geometry), display: true)
     }
 
-    /// Window rect that comfortably contains every state (closed, popping,
-    /// opened) plus shadow/animation room. Top-anchored to screen, width
-    /// matches hoverTriggerRect (which is the drag-detection area).
+    /// Window rect that matches hoverTriggerRect exactly. Since
+    /// hoverTriggerRect now mirrors `openedPanelSize`, the window is
+    /// shelf-sized in every state — no transparent margins to swallow
+    /// clicks on the menu bar / apps outside the shelf area.
     private static func containerFrame(for geometry: NotchGeometry) -> NSRect {
-        let hover = geometry.hoverTriggerRect
-        let neededHeight = max(hover.height, geometry.openedPanelSize.height + 60)
-        return NSRect(
-            x: hover.origin.x,
-            y: geometry.screenFrame.maxY - neededHeight,
-            width: hover.width,
-            height: neededHeight
-        )
+        return geometry.hoverTriggerRect
     }
 }
