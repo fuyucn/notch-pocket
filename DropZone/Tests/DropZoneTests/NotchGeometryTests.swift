@@ -250,9 +250,9 @@ struct NotchGeometryTests {
             hasNotch: true
         )
         let rect = geo.hoverTriggerRect
-        #expect(rect.width == screen.width * 0.5)
-        #expect(rect.height == 200)
-        #expect(rect.midX == screen.midX)
+        #expect(rect.width == geo.openedPanelSize.width)
+        #expect(rect.height == geo.openedPanelSize.height)
+        #expect(rect.midX == notch.midX)
         #expect(rect.maxY == screen.maxY)   // top-anchored to screen, includes notch row
     }
 

@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v0.5.1] — 2026-04-19
+
+Plan 10: Click-through and shelf size tuning (`plan-10-click-through-fix`)
+
+### Changed
+- `hoverTriggerRect` (drag-trigger zone + NotchPanel window frame) now exactly matches `openedPanelSize` (520×170) and is centered on the notch. This drops the 60pt shadow margin and the old half-screen-wide drag zone, so the panel frame no longer extends beyond the visible shelf and menu-bar icons outside that rect are reachable.
+- Menu bar: `Show DropZone` menu item is always visible regardless of shelf count (was previously hidden when the shelf was empty).
+
+### Known
+- The NotchShape has concave top corners; the rectangular NSWindow frame still covers those tiny concave regions, so clicks there are captured instead of passing through. In practice the area is too small to be hit accidentally.
+
 ## [v0.5.0] — 2026-04-18
 
 Plan 9: Minimized capsule around the notch (`plan-9-minimize-retry`)

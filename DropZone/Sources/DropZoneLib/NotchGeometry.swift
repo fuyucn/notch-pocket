@@ -140,11 +140,13 @@ public struct NotchGeometry: Sendable {
     /// notch/menu-bar row so the panel can be anchored flush to the top of the
     /// screen and visually wrap the notch like a Dynamic Island.
     public var hoverTriggerRect: NSRect {
-        let width = screenFrame.width * 0.5
-        let height: CGFloat = 200
-        let x = screenFrame.midX - width / 2
-        let y = screenFrame.maxY - height   // top-anchored
-        return NSRect(x: x, y: y, width: width, height: height)
+        // Size matches the opened shelf so the drag-trigger area doesn't
+        // extend beyond the visible panel. Centered on the notch.
+        let size = openedPanelSize
+        let notchMidX = notchRect?.midX ?? screenFrame.midX
+        let x = notchMidX - size.width / 2
+        let y = screenFrame.maxY - size.height   // top-anchored
+        return NSRect(x: x, y: y, width: size.width, height: size.height)
     }
 
     // MARK: - Private
