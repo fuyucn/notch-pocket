@@ -28,11 +28,20 @@ public final class StatusBarController {
     }
 
     public func setup() {
-        statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
-        if let button = statusItem?.button {
-            button.image = NSImage(systemSymbolName: "tray.and.arrow.down", accessibilityDescription: "DropZone")
+        let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
+        statusItem = item
+        item.behavior = []
+        item.isVisible = true
+        if let button = item.button {
+            // Plain text backup guarantees something visible even if the
+            // SF Symbol fails to render.
+            button.title = "DZ"
+            if let icon = NSImage(systemSymbolName: "tray.and.arrow.down", accessibilityDescription: "DropZone") {
+                button.image = icon
+                button.imagePosition = .imageOnly
+            }
         }
-        statusItem?.menu = menu
+        item.menu = menu
     }
 
     public func teardown() {
@@ -60,14 +69,26 @@ public final class StatusBarController {
             clearShelfItem?.isHidden = false
 
             if let button = statusItem?.button {
-                button.image = NSImage(systemSymbolName: "tray.full", accessibilityDescription: "DropZone – \(count) files")
+                if let icon = NSImage(systemSymbolName: "tray.full", accessibilityDescription: "DropZone – \(count) files") {
+                    button.image = icon
+                    button.title = ""
+                } else {
+                    button.image = nil
+                    button.title = "DZ \(count)"
+                }
             }
         } else {
             fileCountItem?.isHidden = true
             clearShelfItem?.isHidden = true
 
             if let button = statusItem?.button {
-                button.image = NSImage(systemSymbolName: "tray.and.arrow.down", accessibilityDescription: "DropZone")
+                if let icon = NSImage(systemSymbolName: "tray.and.arrow.down", accessibilityDescription: "DropZone") {
+                    button.image = icon
+                    button.title = ""
+                } else {
+                    button.image = nil
+                    button.title = "DZ"
+                }
             }
         }
     }

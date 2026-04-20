@@ -100,8 +100,9 @@ public final class MinimizedPanel: NSPanel {
         viewModel: NotchViewModel,
         onTap: @escaping () -> Void
     ) -> MinimizedBarView {
-        let notchWidth = viewModel.geometry.notchRect?.width ?? 200
-        let notchHeight = viewModel.geometry.notchRect?.height ?? MinimizedBarView.height
+        let geo = viewModel.geometry
+        let notchWidth = geo.notchRect?.width ?? geo.fallbackNotchSize?.width ?? 200
+        let notchHeight = geo.notchRect?.height ?? geo.fallbackNotchSize?.height ?? MinimizedBarView.height
         return MinimizedBarView(
             shelfCount: viewModel.shelfCount,
             notchWidth: notchWidth,
@@ -111,9 +112,9 @@ public final class MinimizedPanel: NSPanel {
     }
 
     private static func frame(for geometry: NotchGeometry) -> NSRect {
-        let notchWidth = geometry.notchRect?.width ?? 200
+        let notchWidth = geometry.notchRect?.width ?? geometry.fallbackNotchSize?.width ?? 200
         let notchMidX = geometry.notchRect?.midX ?? geometry.screenFrame.midX
-        let notchHeight = geometry.notchRect?.height ?? MinimizedBarView.height
+        let notchHeight = geometry.notchRect?.height ?? geometry.fallbackNotchSize?.height ?? MinimizedBarView.height
         let width = notchWidth + 2 * MinimizedBarView.shoulderWidth
         return NSRect(
             x: notchMidX - width / 2,

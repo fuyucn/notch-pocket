@@ -33,6 +33,14 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
         shelfManager.startExpiryTimer()
         fileShelfManager = shelfManager
 
+        // Status bar is created first so the tray icon is present even if
+        // screen geometry setup fails for any reason (headless, etc).
+        let controller = StatusBarController()
+        controller.setup()
+        controller.updateFileCount(shelfManager.items.count)
+        controller.onClearShelf = { [weak shelfManager] in shelfManager?.clearAll() }
+        statusBarController = controller
+
         // Prefer a notched screen's notch dimensions as the canonical DropZone
         // capsule size. When jumping to non-notched screens later we reuse these
         // dimensions so the capsule looks identical regardless of display.
@@ -104,11 +112,7 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
             return false
         }
 
-        // Status bar
-        let controller = StatusBarController()
-        controller.setup()
-        controller.updateFileCount(shelfManager.items.count)
-        controller.onClearShelf = { [weak shelfManager] in shelfManager?.clearAll() }
+        // Wire up shelf-count → controller + view model.
         let previousOnItemsChanged = shelfManager.onItemsChanged
         shelfManager.onItemsChanged = { [weak controller, weak shelfManager, weak vm] in
             previousOnItemsChanged?()
@@ -123,7 +127,6 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
             // Auto-demote minimized → closed when shelf goes empty.
             if count == 0, vm.status == .minimized { vm.status = .closed }
         }
-        statusBarController = controller
 
         // Settings window
         let settingsWindow = SettingsWindowController(settingsManager: settings)
@@ -148,6 +151,8 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
             .sink { [weak self, weak panel, weak minimized, weak vm] newScreen in
                 guard let self, let panel, let minimized, let vm,
                       let newScreen else { return }
+                // requestClose() unconditionally transitions to .minimized or
+                // .closed — safe on both .opened and .popping.
                 if vm.status == .opened || vm.status == .popping {
                     vm.requestClose()
                 }
