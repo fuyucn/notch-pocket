@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v0.6.0] — 2026-04-20
+
+Plan 11: Multi-display support (`plan-11-multi-display`)
+
+### Added
+- **Follow the active display.** DropZone's capsule and shelf move to the screen hosting the foreground app. Switching focus to a window on another display jumps the capsule there; switching back returns it.
+- **Non-notched screens show a pill-shaped capsule** at the top center, sized to match the MacBook notch so the capsule looks identical across displays.
+- `ActiveScreenTracker` service observing `NSWindow.didBecomeKeyNotification`, `NSWorkspace.didActivateApplicationNotification`, and `NSApplication.didChangeScreenParametersNotification`.
+- `NotchGeometry` gained `fallbackNotchSize` so non-notched displays reuse the MacBook notch dimensions for layout.
+
+### Changed
+- When a screen change fires with the shelf opened or popping, the shelf is dismissed first (sent to `.minimized` if it has items, otherwise `.closed`) before relocating.
+- Status bar setup is performed immediately after the shelf manager is created, so the tray icon appears even if later setup fails.
+- Popping-mode top bar: logo icon only (the "Notch Pocket" label is shown only in the opened shelf, where there's enough horizontal room).
+- Status item button always sets a "DZ" title as a backup, in case the SF Symbol fails to render.
+
 ## [v0.5.1] — 2026-04-19
 
 Plan 10: Click-through and shelf size tuning (`plan-10-click-through-fix`)

@@ -94,15 +94,17 @@ public struct NotchPanelRootView: View {
         let notchWidth = viewModel.geometry.notchRect?.width ?? 200
         let isOpened = viewModel.status == .opened
         HStack(spacing: 0) {
-            // Left shoulder — logo + title
+            // Left shoulder — logo (+ title only when opened; popping is too narrow)
             HStack(spacing: 6) {
                 Image(systemName: "tray.fill")
                     .font(.system(size: 11, weight: .medium))
                     .foregroundStyle(.white.opacity(0.9))
-                Text("Notch Pocket")
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(.white.opacity(0.9))
-                    .lineLimit(1)
+                if isOpened {
+                    Text("Notch Pocket")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(.white.opacity(0.9))
+                        .lineLimit(1)
+                }
             }
             .frame(maxWidth: .infinity, alignment: isOpened ? .leading : .trailing)
             .padding(.leading, isOpened ? 40 : 0)
