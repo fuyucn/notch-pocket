@@ -10,6 +10,10 @@ public struct NotchGeometry: Sendable {
     public let screenFrame: NSRect
     /// Whether this screen has a hardware notch.
     public let hasNotch: Bool
+    /// When the active screen has no real notch, panel dimensions fall back
+    /// to this size so the DropZone capsule stays visually consistent across
+    /// displays. `nil` means use the built-in `fallbackPillSize`.
+    public let fallbackNotchSize: NSSize?
 
     // MARK: - Design constants
 
@@ -41,7 +45,7 @@ public struct NotchGeometry: Sendable {
     /// Panel size in the popping (pre-activation) state.
     /// Width = notch + sidePadding*2, height = matches existing preActivatedSize.height.
     public var preActivatedPanelSize: NSSize {
-        let notchWidth = notchRect?.width ?? 200
+        let notchWidth = notchRect?.width ?? fallbackNotchSize?.width ?? 200
         return NSSize(
             width: notchWidth + Self.sidePadding * 2,
             height: Self.preActivatedSize.height
@@ -52,7 +56,7 @@ public struct NotchGeometry: Sendable {
     /// Width = notch + sidePadding * 4 (default 520 for 200-wide notch),
     /// height = matches shelfExpandedSize.height (compact Dynamic Island feel).
     public var openedPanelSize: NSSize {
-        let notchWidth = notchRect?.width ?? 200
+        let notchWidth = notchRect?.width ?? fallbackNotchSize?.width ?? 200
         return NSSize(
             width: notchWidth + Self.sidePadding * 4,
             height: Self.shelfExpandedSize.height
@@ -61,9 +65,10 @@ public struct NotchGeometry: Sendable {
 
     // MARK: - Init
 
-    /// Compute geometry for the given screen.
-    public init(screen: NSScreen) {
-        self.screenFrame = screen.frame
+    /// Compute geometry for the given screen, using `fallbackNotchSize` as the
+    /// notch-equivalent dimensions when the screen has no real notch.
+    public init(screen: NSScreen, fallbackNotchSize: NSSize? = nil) {
+        let screenFrame = screen.frame
 
         if screen.safeAreaInsets.top != 0,
            let left = screen.auxiliaryTopLeftArea,
@@ -71,7 +76,7 @@ public struct NotchGeometry: Sendable {
             // Screen has a notch — compute notch rect from auxiliary areas
             let rect = NSRect(
                 x: left.maxX,
-                y: screen.frame.maxY - screen.safeAreaInsets.top,
+                y: screenFrame.maxY - screen.safeAreaInsets.top,
                 width: right.minX - left.maxX,
                 height: screen.safeAreaInsets.top
             )
@@ -80,23 +85,35 @@ public struct NotchGeometry: Sendable {
             self.activationZone = Self.expandedActivationZone(around: rect)
         } else {
             // No notch — use a centered pill at top of screen
+            let pillWidth = fallbackNotchSize?.width ?? Self.fallbackPillSize.width
+            let pillHeight = fallbackNotchSize?.height ?? Self.fallbackPillSize.height
+            let pillOrigin = NSPoint(
+                x: screenFrame.midX - pillWidth / 2,
+                y: screenFrame.maxY - pillHeight
+            )
+            let pillRect = NSRect(origin: pillOrigin, size: NSSize(width: pillWidth, height: pillHeight))
             self.notchRect = nil
             self.hasNotch = false
-            let pillOrigin = NSPoint(
-                x: screen.frame.midX - Self.fallbackPillSize.width / 2,
-                y: screen.frame.maxY - Self.fallbackPillSize.height
-            )
-            let pillRect = NSRect(origin: pillOrigin, size: Self.fallbackPillSize)
             self.activationZone = Self.expandedActivationZone(around: pillRect)
         }
+        self.screenFrame = screenFrame
+        self.fallbackNotchSize = fallbackNotchSize
     }
 
-    /// Create geometry with explicit values (for testing).
-    public init(notchRect: NSRect?, activationZone: NSRect, screenFrame: NSRect, hasNotch: Bool) {
+    /// Create geometry with explicit values (for testing and for AppDelegate's
+    /// active-screen pathway).
+    public init(
+        notchRect: NSRect?,
+        activationZone: NSRect,
+        screenFrame: NSRect,
+        hasNotch: Bool,
+        fallbackNotchSize: NSSize? = nil
+    ) {
         self.notchRect = notchRect
         self.activationZone = activationZone
         self.screenFrame = screenFrame
         self.hasNotch = hasNotch
+        self.fallbackNotchSize = fallbackNotchSize
     }
 
     // MARK: - Panel positioning
@@ -143,8 +160,8 @@ public struct NotchGeometry: Sendable {
         // Size matches the opened shelf so the drag-trigger area doesn't
         // extend beyond the visible panel. Centered on the notch.
         let size = openedPanelSize
-        let notchMidX = notchRect?.midX ?? screenFrame.midX
-        let x = notchMidX - size.width / 2
+        let midX = notchRect?.midX ?? screenFrame.midX
+        let x = midX - size.width / 2
         let y = screenFrame.maxY - size.height   // top-anchored
         return NSRect(x: x, y: y, width: size.width, height: size.height)
     }

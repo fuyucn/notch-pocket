@@ -343,4 +343,36 @@ struct NotchGeometryTests {
         // Fallback notch width is 200.
         #expect(geo.preActivatedPanelSize.width == 200 + NotchGeometry.sidePadding * 2)
     }
+
+    @Test
+    func fallbackNotchSizeUsedOnNonNotchedScreen() {
+        let screen = NSRect(x: 0, y: 0, width: 2560, height: 1440)
+        let fallback = NSSize(width: 240, height: 32)
+        let geo = NotchGeometry(
+            notchRect: nil,
+            activationZone: NSRect(x: 1160, y: 1400, width: 240, height: 40),
+            screenFrame: screen,
+            hasNotch: false,
+            fallbackNotchSize: fallback
+        )
+        #expect(geo.openedPanelSize.width == fallback.width + NotchGeometry.sidePadding * 4)
+        #expect(geo.preActivatedPanelSize.width == fallback.width + NotchGeometry.sidePadding * 2)
+        #expect(geo.hoverTriggerRect.width == geo.openedPanelSize.width)
+        #expect(geo.hoverTriggerRect.height == geo.openedPanelSize.height)
+    }
+
+    @Test
+    func fallbackIgnoredOnNotchedScreen() {
+        let notch = NSRect(x: 700, y: 968, width: 200, height: 32)
+        let screen = NSRect(x: 0, y: 0, width: 1600, height: 1000)
+        let fallback = NSSize(width: 999, height: 99)
+        let geo = NotchGeometry(
+            notchRect: notch,
+            activationZone: NSRect(x: 670, y: 908, width: 260, height: 102),
+            screenFrame: screen,
+            hasNotch: true,
+            fallbackNotchSize: fallback
+        )
+        #expect(geo.openedPanelSize.width == notch.width + NotchGeometry.sidePadding * 4)
+    }
 }
