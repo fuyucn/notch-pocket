@@ -107,7 +107,12 @@ public final class NotchPanel: NSPanel {
     /// Public so tests can force-sync after synchronous model mutation
     /// (without waiting for Combine dispatch).
     public func syncIgnoresMouseEvents() {
-        ignoresMouseEvents = (viewModel.status == .closed)
+        // Idle states (.closed, .minimized) must pass clicks through to the
+        // menu bar and apps below — the NotchPanel has no visible content in
+        // these states (the MinimizedPanel renders the capsule separately).
+        // Active states (.popping, .opened) receive clicks so the shelf is
+        // interactive.
+        ignoresMouseEvents = (viewModel.status == .closed || viewModel.status == .minimized)
     }
 
     public func updateGeometry(_ geometry: NotchGeometry) {

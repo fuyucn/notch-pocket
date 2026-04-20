@@ -45,6 +45,19 @@ struct NotchPanelTests {
     }
 
     @Test @MainActor
+    func panelIgnoresMouseEventsWhenMinimized() {
+        // The NotchPanel's big hoverTriggerRect frame would otherwise
+        // swallow clicks on menu-bar icons next to the notch.
+        let geo = makeGeometry()
+        let vm = NotchViewModel(geometry: geo)
+        vm.shelfCount = 3
+        vm.status = .minimized
+        let panel = NotchPanel(viewModel: vm)
+        panel.syncIgnoresMouseEvents()
+        #expect(panel.ignoresMouseEvents == true)
+    }
+
+    @Test @MainActor
     func updateGeometryResizesFrame() {
         let geo = makeGeometry()
         let vm = NotchViewModel(geometry: geo)
