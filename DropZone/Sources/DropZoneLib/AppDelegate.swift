@@ -1,4 +1,5 @@
 import AppKit
+import Combine
 
 public final class AppDelegate: NSObject, NSApplicationDelegate {
     private(set) public var statusBarController: StatusBarController?
@@ -9,6 +10,9 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
     private(set) public var settingsWindowController: SettingsWindowController?
     private(set) public var keyboardShortcutManager: KeyboardShortcutManager?
     private(set) public var minimizedPanel: MinimizedPanel?
+    private(set) public var activeScreenTracker: ActiveScreenTracker?
+    private var activeScreenCancellable: AnyCancellable?
+    private var fallbackNotchSize: NSSize = NotchGeometry.fallbackPillSize
 
     public override init() { super.init() }
 
@@ -29,11 +33,24 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
         shelfManager.startExpiryTimer()
         fileShelfManager = shelfManager
 
-        // Primary-screen geometry — multi-display is future work.
-        guard let primaryScreen = NSScreen.screens.first(where: { $0.safeAreaInsets.top != 0 }) ?? NSScreen.main else {
+        // Prefer a notched screen's notch dimensions as the canonical DropZone
+        // capsule size. When jumping to non-notched screens later we reuse these
+        // dimensions so the capsule looks identical regardless of display.
+        let notchedScreen = NSScreen.screens.first(where: { $0.safeAreaInsets.top != 0 })
+        if let notched = notchedScreen {
+            let geom = NotchGeometry(screen: notched)
+            if let notchRect = geom.notchRect {
+                fallbackNotchSize = notchRect.size
+            }
+        }
+
+        // Active screen at launch = whatever ActiveScreenTracker currently reports.
+        let tracker = ActiveScreenTracker()
+        activeScreenTracker = tracker
+        guard let startupScreen = tracker.activeScreen.value else {
             return
         }
-        let geometry = NotchGeometry(screen: primaryScreen)
+        let geometry = NotchGeometry(screen: startupScreen, fallbackNotchSize: fallbackNotchSize)
 
         let vm = NotchViewModel(geometry: geometry)
         vm.shelfCount = shelfManager.items.count
@@ -125,6 +142,23 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
             shelfManager.expiryInterval = settings.expiryInterval
         }
 
+        tracker.start()
+        activeScreenCancellable = tracker.activeScreen
+            .dropFirst()   // skip initial value (already applied)
+            .sink { [weak self, weak panel, weak minimized, weak vm] newScreen in
+                guard let self, let panel, let minimized, let vm,
+                      let newScreen else { return }
+                if vm.status == .opened || vm.status == .popping {
+                    vm.requestClose()
+                }
+                let newGeo = NotchGeometry(
+                    screen: newScreen,
+                    fallbackNotchSize: self.fallbackNotchSize
+                )
+                panel.updateGeometry(newGeo)
+                minimized.updateGeometry(newGeo)
+            }
+
         // Global hotkey — keep Cmd+Shift+D working as a simple "force open" stub
         let shortcuts = KeyboardShortcutManager()
         shortcuts.onToggleShelf = { [weak vm] in
@@ -136,6 +170,10 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     public func applicationWillTerminate(_ notification: Notification) {
+        activeScreenCancellable?.cancel()
+        activeScreenCancellable = nil
+        activeScreenTracker?.stop()
+        activeScreenTracker = nil
         keyboardShortcutManager?.unregister()
         keyboardShortcutManager = nil
         settingsWindowController?.closeSettings()
