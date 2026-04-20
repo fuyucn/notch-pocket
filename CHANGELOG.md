@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v0.6.2] — 2026-04-20
+
+Plan 13: Minimize menubar click-through (`plan-13-minimize-menubar-passthrough`)
+
+### Fixed
+- When the shelf is minimized, the NotchPanel window no longer swallows clicks on menu-bar icons to the left and right of the notch. The panel now sets `ignoresMouseEvents = true` in both `.closed` and `.minimized` states (previously only `.closed`). The visible capsule itself is still interactive because it lives in a separate MinimizedPanel.
+
 ## [v0.6.1] — 2026-04-20
 
 Plan 12: Only file drags trigger popping (`plan-12-drag-file-only`)
