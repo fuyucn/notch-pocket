@@ -35,14 +35,14 @@ Users with external monitors don't want to look up at the MacBook notch when the
 
 ### Active screen selection
 
-Priority-ordered:
+The computation is driven by notifications — we don't poll. On each notification we update a cached active screen using this priority:
 
-1. `NSApp.keyWindow?.screen` — this app (if ever key), fallback that almost never applies since DropZone is an accessory app.
-2. Front app's main/key window's `.screen`. Use `NSWorkspace.shared.frontmostApplication` → `runningApplication.ownsMenuBar` etc. — but the reliable path is to observe `NSWorkspace.didActivateApplicationNotification` + `NSWindow.didBecomeKeyNotification` and cache the last front-app's screen from the notification's window info.
-3. **Fallback chain when no clear front window:**
-   a. First screen whose `safeAreaInsets.top != 0` (notched MacBook display).
-   b. `NSScreen.main`.
-   c. `NSScreen.screens.first`.
+1. **Most recent `NSWindow.didBecomeKeyNotification` source window**: its `.screen` (the window that most recently became key).
+2. **`NSScreen.main`**: AppKit's own "main screen" hint — this returns the screen containing the current key window (which may be owned by another app).
+3. First screen whose `safeAreaInsets.top != 0` (notched MacBook display).
+4. `NSScreen.screens.first`.
+
+`NSWorkspace.didActivateApplicationNotification` also triggers a recompute (in case an app becomes frontmost but no window notification fires). When that notification arrives, we simply re-run the priority chain above — we do not try to read the active app's windows directly (their screen info is unreliable cross-process).
 
 ### Size consistency across screens
 
