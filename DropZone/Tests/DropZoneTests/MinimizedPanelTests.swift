@@ -18,14 +18,14 @@ struct MinimizedPanelTests {
         let geo = makeGeometry()
         let vm = NotchViewModel(geometry: geo)
         let panel = MinimizedPanel(viewModel: vm)
-        // Width = notch + 2 * shoulderWidth.
-        let expectedWidth = geo.notchRect!.width + 2 * MinimizedBarView.shoulderWidth
-        #expect(panel.frame.width == expectedWidth)
-        #expect(panel.frame.height == MinimizedBarView.height)
-        // Top of panel flush with screen top.
+        // Width = notch + 2 * shoulderWidth, shoulderWidth = notchHeight * 1.2.
+        // NSPanel rounds frame dims to ints, so compare with 1pt tolerance.
+        let expectedHeight = geo.notchRect!.height
+        let expectedWidth = geo.notchRect!.width + 2 * (expectedHeight * 1.2)
+        #expect(abs(panel.frame.width - expectedWidth) < 2)
+        #expect(panel.frame.height == expectedHeight)
         #expect(panel.frame.maxY == geo.screenFrame.maxY)
-        // Centered on notch.
-        #expect(panel.frame.midX == geo.notchRect!.midX)
+        #expect(abs(panel.frame.midX - geo.notchRect!.midX) < 2)
     }
 
     @Test @MainActor
@@ -77,9 +77,10 @@ struct MinimizedPanelTests {
             hasNotch: true
         )
         panel.updateGeometry(newGeo)
-        let expectedWidth = newGeo.notchRect!.width + 2 * MinimizedBarView.shoulderWidth
-        #expect(panel.frame.width == expectedWidth)
-        #expect(panel.frame.midX == newGeo.notchRect!.midX)
+        let expectedHeight = newGeo.notchRect!.height
+        let expectedWidth = newGeo.notchRect!.width + 2 * (expectedHeight * 1.2)
+        #expect(abs(panel.frame.width - expectedWidth) < 2)
+        #expect(abs(panel.frame.midX - newGeo.notchRect!.midX) < 2)
         #expect(panel.frame.maxY == newGeo.screenFrame.maxY)
     }
 }

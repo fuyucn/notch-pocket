@@ -27,14 +27,21 @@ public struct MinimizedBarView: View {
     }
 
     public var body: some View {
+        // Scale text/icon + shoulder width proportionally to the capsule
+        // height so the layout feels right whether we're on a 32pt MBP
+        // notch or a 24pt external menu bar.
+        let fontSize = notchHeight * 0.34
+        let badgeHPad = notchHeight * 0.22
+        let badgeVPad = notchHeight * 0.06
+        let shoulderW = notchHeight * 1.2    // ~38pt @ 32pt, ~29pt @ 24pt
         HStack(spacing: 0) {
             // Left shoulder
             HStack(spacing: 4) {
                 Image(systemName: "tray.fill")
-                    .font(.system(size: 11, weight: .medium))
+                    .font(.system(size: fontSize, weight: .medium))
                     .foregroundStyle(.white.opacity(0.9))
             }
-            .frame(width: Self.shoulderWidth, height: notchHeight)
+            .frame(width: shoulderW, height: notchHeight)
 
             // Notch gap — reserved transparent space the physical notch sits over.
             Color.clear.frame(width: notchWidth, height: notchHeight)
@@ -42,13 +49,13 @@ public struct MinimizedBarView: View {
             // Right shoulder
             HStack(spacing: 0) {
                 Text("\(shelfCount)")
-                    .font(.system(size: 11, weight: .semibold))
+                    .font(.system(size: fontSize, weight: .semibold))
                     .foregroundStyle(.white)
-                    .padding(.horizontal, 7)
-                    .padding(.vertical, 2)
+                    .padding(.horizontal, badgeHPad)
+                    .padding(.vertical, badgeVPad)
                     .background(Capsule().fill(Color.white.opacity(0.18)))
             }
-            .frame(width: Self.shoulderWidth, height: notchHeight)
+            .frame(width: shoulderW, height: notchHeight)
         }
         .frame(height: notchHeight)
         .background(

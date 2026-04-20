@@ -102,11 +102,10 @@ public final class MinimizedPanel: NSPanel {
     ) -> MinimizedBarView {
         let geo = viewModel.geometry
         let notchWidth = geo.notchRect?.width ?? geo.fallbackNotchSize?.width ?? 200
-        let notchHeight = geo.notchRect?.height ?? geo.fallbackNotchSize?.height ?? MinimizedBarView.height
         return MinimizedBarView(
             shelfCount: viewModel.shelfCount,
             notchWidth: notchWidth,
-            notchHeight: notchHeight,
+            notchHeight: capsuleHeight(for: geo),
             onTap: onTap
         )
     }
@@ -114,13 +113,36 @@ public final class MinimizedPanel: NSPanel {
     private static func frame(for geometry: NotchGeometry) -> NSRect {
         let notchWidth = geometry.notchRect?.width ?? geometry.fallbackNotchSize?.width ?? 200
         let notchMidX = geometry.notchRect?.midX ?? geometry.screenFrame.midX
-        let notchHeight = geometry.notchRect?.height ?? geometry.fallbackNotchSize?.height ?? MinimizedBarView.height
-        let width = notchWidth + 2 * MinimizedBarView.shoulderWidth
+        let height = capsuleHeight(for: geometry)
+        // Shoulder width is proportional to capsule height — matches the
+        // scaling done inside MinimizedBarView.body.
+        let shoulderWidth = height * 1.2
+        let width = notchWidth + 2 * shoulderWidth
         return NSRect(
             x: notchMidX - width / 2,
-            y: geometry.screenFrame.maxY - notchHeight,
+            y: geometry.screenFrame.maxY - height,
             width: width,
-            height: notchHeight
+            height: height
         )
+    }
+
+    /// Capsule vertical size: match the menu bar height of the current
+    /// screen. On a notched display this equals the real notch height;
+    /// on a non-notched display this is the standard 24pt menu-bar area.
+    /// Falls back to NSStatusBar.system.thickness if visibleFrame isn't
+    /// useful (e.g. under screen capture, full-screen app).
+    private static func capsuleHeight(for geometry: NotchGeometry) -> CGFloat {
+        if let notch = geometry.notchRect {
+            return notch.height
+        }
+        // Derive menu-bar height from screen geometry: the area occupied
+        // above `visibleFrame` is the menu bar.
+        let menuBarHeight: CGFloat
+        if let screen = NSScreen.screens.first(where: { $0.frame == geometry.screenFrame }) {
+            menuBarHeight = screen.frame.maxY - screen.visibleFrame.maxY
+        } else {
+            menuBarHeight = 0
+        }
+        return menuBarHeight > 0 ? menuBarHeight : NSStatusBar.system.thickness
     }
 }

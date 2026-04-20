@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v0.6.3] — 2026-04-20
+
+Plan 14: Minimize height on non-notched screens (`plan-14-minimize-external-height`)
+
+### Fixed
+- Minimized capsule height now tracks the active screen's menu-bar height (`screen.frame.maxY - screen.visibleFrame.maxY`) — ~32pt on MBP notched, ~24pt on external displays — so the capsule never overhangs the menu bar.
+
+### Changed
+- Capsule shoulders, icon, and count badge now scale proportionally to the capsule height, so the 24pt external-screen capsule doesn't look squashed next to the 32pt MBP notched capsule.
+
 ## [v0.6.2] — 2026-04-20
 
 Plan 13: Minimize menubar click-through (`plan-13-minimize-menubar-passthrough`)
