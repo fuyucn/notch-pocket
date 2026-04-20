@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v0.6.1] — 2026-04-20
+
+Plan 12: Only file drags trigger popping (`plan-12-drag-file-only`)
+
+### Fixed
+- Popping no longer fires on ordinary mouse drags (window moves, text selection, scrollbar grabs). `EventMonitors` now captures the drag pasteboard's `changeCount` at mouse-down and only flags `isDragging = true` when a real system drag session starts during the press AND that session's pasteboard contains a file URL.
+
 ## [v0.6.0] — 2026-04-20
 
 Plan 11: Multi-display support (`plan-11-multi-display`)
